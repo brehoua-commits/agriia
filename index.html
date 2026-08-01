@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>AgriIA — Cultive juste</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#223c28">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AgriIA">
+<meta name="mobile-web-app-capable" content="yes">
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -168,6 +179,9 @@
   <header>
     <h1>Un terrain, mille possibles.</h1>
     <p>Cultive juste. Fais-le reconnaître.</p>
+    <button id="btn-installer-app" style="display:none;margin-top:14px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:12px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;">
+      📲 Installer l'app
+    </button>
   </header>
 
   <!-- ============ VUE DIAGNOSTIC ============ -->
@@ -399,8 +413,9 @@ async function lancerDiagnostic() {
     sol = sol || {};
     if (phManuel === 'acide') sol.ph = 5.5;
     else if (phManuel === 'neutre') sol.ph = 6.8;
-    else if (phManuel === 'alcal
-               }
+    else if (phManuel === 'alcalin') sol.ph = 8;
+    if (textureManuelle) sol.texture = textureManuelle;
+  }
 
   if (!climat || !sol || sol.ph === undefined || !sol.texture) {
     zoneResultats.innerHTML = '<div class="disclaimer">Impossible de récupérer toutes les données automatiquement. Renseigne le pH et la texture manuellement ci-dessus puis relance le diagnostic.</div>';
@@ -668,6 +683,36 @@ function initSectionCertification(terrainId, container) {
    ============================================================ */
 initCarte();
 afficherTerrains();
+
+/* ============================================================
+   PWA — enregistrement du service worker + invite d'installation
+   ============================================================ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* silencieux */ });
+  });
+}
+
+let evenementInstallation = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  evenementInstallation = e;
+  const btn = document.getElementById('btn-installer-app');
+  if (btn) btn.style.display = 'block';
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btn-installer-app');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      if (!evenementInstallation) return;
+      evenementInstallation.prompt();
+      await evenementInstallation.userChoice;
+      evenementInstallation = null;
+      btn.style.display = 'none';
+    });
+  }
+});
 </script>
 </body>
 </html>
