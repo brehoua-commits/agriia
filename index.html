@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AgriIA — Cultive juste</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Palette "goutte sur feuille" — verts frais, sol terre, blanc rosée */
+    --foret: #223c28;
+    --feuille: #5c9765;
+    --feuille-clair: #8fc496;
+    --rosee: #f4f8f0;
+    --terre: #b97a4f;
+    --terre-clair: #ecd9c4;
+    --terre-fonce: #7c4f30;
+    --sauge: #dbe7d4;
+    --texte: #1e2b20;
+    --texte-doux: #6b7a6e;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--rosee);
+    color: var(--texte);
+  }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* En-tête — texture rappelant les rangs de culture / ondulations d'eau */
+  header {
+    background: var(--foret);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='46'%3E%3Cpath d='M0 23 Q35 2 70 23 T140 23' stroke='%23ffffff' stroke-opacity='0.08' stroke-width='1.4' fill='none'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    color: #fff;
+    padding: 26px 22px 20px;
+    flex-shrink: 0;
+  }
+  header h1 {
+    margin: 0; font-size: 26px; line-height: 1.15;
+    font-family: 'Fraunces', serif; font-style: italic; font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  header p { margin: 7px 0 0; font-size: 13.5px; opacity: 0.82; letter-spacing: 0.2px; }
+
+  /* Vues */
+  .vue { display: none; flex: 1; overflow-y: auto; padding: 18px 16px; padding-bottom: 104px; }
+  .vue.active { display: block; }
+
+  /* Nav bas — pilule flottante sombre, façon dashboard app */
+  nav.bottom-nav {
+    position: fixed; bottom: 14px; left: 14px; right: 14px;
+    display: flex; gap: 4px;
+    background: var(--foret);
+    border-radius: 22px;
+    padding: 7px;
+    box-shadow: 0 10px 28px rgba(30,43,32,0.28);
+    z-index: 1000;
+  }
+  nav.bottom-nav button {
+    flex: 1; background: none; border: none; padding: 9px 4px;
+    font-size: 11px; color: rgba(255,255,255,0.55); cursor: pointer;
+    border-radius: 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    transition: background 0.2s, color 0.2s;
+  }
+  nav.bottom-nav button .icone { font-size: 18px; }
+  nav.bottom-nav button.actif { color: var(--foret); background: var(--rosee); font-weight: 600; }
+
+  /* Composants communs */
+  h2.titre-section {
+    color: var(--foret); font-size: 21px; margin: 2px 0 14px;
+    font-family: 'Fraunces', serif; font-style: italic; font-weight: 600;
+  }
+  .carte-bloc {
+    background: #fff; border-radius: 20px; padding: 18px; margin-bottom: 14px;
+    border: 1px solid var(--sauge);
+    box-shadow: 0 2px 10px rgba(34,60,40,0.05);
+  }
+  label.champ-label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--foret); text-transform: uppercase; letter-spacing: 0.4px; }
+  input[type="text"], select, textarea {
+    width: 100%; padding: 11px 13px; border: 1px solid var(--sauge); border-radius: 12px;
+    font-size: 15px; margin-bottom: 12px; font-family: inherit; background: var(--rosee);
+    color: var(--texte);
+  }
+  input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: var(--feuille); background: #fff; }
+  textarea { resize: vertical; min-height: 60px; }
+  button.btn {
+    background: var(--feuille); color: #fff; border: none; border-radius: 14px;
+    padding: 13px 18px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%;
+    letter-spacing: 0.1px;
+  }
+  button.btn.secondaire { background: var(--terre); }
+  button.btn.contour { background: transparent; color: var(--feuille); border: 1.5px solid var(--feuille); }
+  button.btn:disabled { background: var(--sauge); color: var(--texte-doux); }
+  .disclaimer {
+    background: var(--terre-clair); color: var(--terre-fonce); font-size: 12.5px;
+    padding: 11px 13px; border-radius: 14px; margin-bottom: 14px; line-height: 1.4;
+  }
+  .badge-pct {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 40px; height: 26px; padding: 0 9px;
+    border-radius: 13px 13px 13px 3px;
+    font-family: 'Inter'; font-size: 12.5px; font-weight: 700;
+    color: #fff;
+  }
+
+  /* Diagnostic */
+  .resultat-culture {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 11px 0; border-bottom: 1px solid var(--sauge);
+  }
+  .resultat-culture:last-child { border-bottom: none; }
+  .resultat-culture .nom { font-weight: 600; }
+  .loader { text-align: center; padding: 22px; color: var(--texte-doux); font-size: 14px; }
+
+  /* Carte */
+  #carte-leaflet { height: 340px; border-radius: 18px; margin-bottom: 12px; border: 1px solid var(--sauge); }
+  .surface-affichee {
+    text-align: center; font-size: 17px; font-weight: 700; color: var(--foret);
+    font-family: 'Fraunces', serif;
+    padding: 11px; background: var(--feuille-clair); border-radius: 14px; margin-bottom: 10px;
+  }
+
+  /* Carnet / terrains */
+  .terrain-card { position: relative; }
+  .terrain-card h3 { margin: 0 0 3px; color: var(--foret); font-family: 'Fraunces', serif; font-weight: 600; font-size: 17px; }
+  .terrain-card .meta { font-size: 12.5px; color: var(--texte-doux); margin-bottom: 10px; }
+  .terrain-card .notes { font-size: 13.5px; margin-bottom: 10px; color: var(--texte); }
+  .terrain-card .supprimer {
+    position: absolute; top: 16px; right: 16px; background: none; border: none;
+    color: var(--terre-fonce); font-size: 12.5px; cursor: pointer;
+  }
+
+  /* Certification — onglets soulignés, plus discrets */
+  .cert-section { border-top: 1px solid var(--sauge); margin-top: 14px; padding-top: 14px; }
+  .cert-titre {
+    font-weight: 600; color: var(--foret); margin-bottom: 12px;
+    font-family: 'Fraunces', serif; font-style: italic; font-size: 15px;
+  }
+  .cert-tabs { display: flex; gap: 16px; margin-bottom: 12px; border-bottom: 1px solid var(--sauge); }
+  .cert-tab {
+    padding: 4px 0 8px; border: none; border-bottom: 2px solid transparent; border-radius: 0;
+    background: transparent; color: var(--texte-doux); font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .cert-tab.actif { color: var(--foret); border-bottom-color: var(--feuille); }
+  .cert-progress-wrap { background: var(--sauge); border-radius: 8px; height: 6px; overflow: hidden; margin-bottom: 9px; }
+  .cert-progress-bar { height: 100%; background: var(--feuille); transition: width .3s; }
+  .cert-progress-label { font-size: 11.5px; color: var(--texte-doux); margin-bottom: 9px; }
+  .cert-checklist { list-style: none; padding: 0; margin: 0; }
+  .cert-checklist li { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; font-size: 13px; border-bottom: 1px solid #f2f6ef; }
+  .cert-checklist li:last-child { border-bottom: none; }
+  .cert-checklist input[type="checkbox"] { margin-top: 2px; accent-color: var(--feuille); flex-shrink: 0; }
+  .cert-organisme { margin-top: 9px; font-size: 11.5px; background: var(--terre-clair); padding: 8px 10px; border-radius: 10px; color: var(--terre-fonce); }
+  .cert-organisme a { color: var(--foret); font-weight: 600; }
+
+  .vide { text-align: center; color: var(--texte-doux); padding: 32px 10px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <h1>Un terrain, mille possibles.</h1>
+    <p>Cultive juste. Fais-le reconnaître.</p>
+  </header>
+
+  <!-- ============ VUE DIAGNOSTIC ============ -->
+  <section id="vue-diagnostic" class="vue active">
+    <h2 class="titre-section">Diagnostic</h2>
+
+    <div class="carte-bloc">
+      <label class="champ-label">Localisation</label>
+      <button class="btn" id="btn-geoloc">📍 Utiliser ma position</button>
+      <div style="height:10px"></div>
+      <input type="text" id="champ-ville" placeholder="Ou entre une ville...">
+      <div id="suggestions-ville"></div>
+    </div>
+
+    <div class="carte-bloc" id="bloc-sol" style="display:none;">
+      <label class="champ-label">Sol (repli manuel si besoin)</label>
+      <select id="sol-ph">
+        <option value="">pH du sol (si connu)</option>
+        <option value="acide">Acide (&lt; 6)</option>
+        <option value="neutre">Neutre (6 - 7,5)</option>
+        <option value="alcalin">Alcalin (&gt; 7,5)</option>
+      </select>
+      <select id="sol-texture">
+        <option value="">Texture du sol</option>
+        <option value="sableux">Sableux</option>
+        <option value="limoneux">Limoneux</option>
+        <option value="argileux">Argileux</option>
+      </select>
+      <label class="champ-label">Ce terrain a-t-il déjà été cultivé ?</label>
+      <select id="hist-cultive">
+        <option value="">Sans réponse</option>
+        <option value="oui">Oui</option>
+        <option value="non">Non, jamais</option>
+      </select>
+      <label class="champ-label">Fertilité perçue</label>
+      <select id="hist-fertilite">
+        <option value="">Sans réponse</option>
+        <option value="pauvre">Plutôt pauvre</option>
+        <option value="moyen">Moyenne</option>
+        <option value="fertile">Fertile</option>
+      </select>
+      <button class="btn secondaire" id="btn-lancer-diagnostic">Lancer le diagnostic</button>
+    </div>
+
+    <div id="resultats-diagnostic"></div>
+
+    <div class="carte-bloc" id="bloc-certif-question" style="display:none;">
+      <label class="champ-label">Veux-tu viser une certification pour ce terrain ?</label>
+      <select id="certif-souhaitee">
+        <option value="">Pas encore intéressé</option>
+        <option value="bio">Bio (France)</option>
+        <option value="hve">HVE (France)</option>
+        <option value="usda">USDA Organic (USA)</option>
+      </select>
+      <button class="btn" id="btn-envoyer-carnet">Envoyer ce terrain vers mon carnet →</button>
+    </div>
+  </section>
+
+  <!-- ============ VUE CARTE ============ -->
+  <section id="vue-carte" class="vue">
+    <h2 class="titre-section">Carte</h2>
+    <div class="carte-bloc">
+      <p style="font-size:13px;color:#777;margin-top:0;">Trace le contour de ta parcelle avec l'outil de dessin (icône polygone en haut à gauche de la carte).</p>
+      <div id="carte-leaflet"></div>
+      <div class="surface-affichee" id="surface-affichee">Aucune surface tracée</div>
+      <button class="btn secondaire" id="btn-surface-vers-carnet" disabled>Envoyer cette surface vers le carnet</button>
+    </div>
+  </section>
+
+  <!-- ============ VUE MES TERRAINS ============ -->
+  <section id="vue-terrains" class="vue">
+    <h2 class="titre-section">Mes terrains</h2>
+    <div class="disclaimer">
+      ⚠️ Ce carnet est un registre personnel non officiel. Il n'existe pas d'API publique gratuite pour vérifier un titre foncier auprès d'une administration — ces informations ne remplacent aucune démarche officielle.
+    </div>
+
+    <div class="carte-bloc">
+      <label class="champ-label">Nom du terrain</label>
+      <input type="text" id="nt-nom" placeholder="ex. Terrain de Sinfra">
+      <label class="champ-label">Type de titre foncier</label>
+      <select id="nt-type">
+        <option value="Titre définitif">Titre définitif</option>
+        <option value="Certificat foncier rural">Certificat foncier rural</option>
+        <option value="Attestation villageoise">Attestation villageoise</option>
+        <option value="Coutumier">Coutumier</option>
+        <option value="Autre">Autre</option>
+      </select>
+      <label class="champ-label">Numéro / référence</label>
+      <input type="text" id="nt-numero" placeholder="ex. CFR-2024-0091">
+      <label class="champ-label">Superficie déclarée (ha)</label>
+      <input type="text" id="nt-superficie" placeholder="ex. 27">
+      <label class="champ-label">Notes</label>
+      <textarea id="nt-notes" placeholder="Historique, pratiques, cultures en cours..."></textarea>
+      <button class="btn" id="btn-ajouter-terrain">Ajouter au carnet</button>
+    </div>
+
+    <div id="liste-terrains"></div>
+  </section>
+
+  <nav class="bottom-nav">
+    <button data-vue="vue-diagnostic" class="actif"><span class="icone">🔍</span>Diagnostic</button>
+    <button data-vue="vue-carte"><span class="icone">🗺️</span>Carte</button>
+    <button data-vue="vue-terrains"><span class="icone">📋</span>Mes terrains</button>
+  </nav>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script>
+/* ============================================================
+   NAVIGATION ENTRE ONGLETS
+   ============================================================ */
+document.querySelectorAll('.bottom-nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.vue').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.remove('actif'));
+    document.getElementById(btn.dataset.vue).classList.add('active');
+    btn.classList.add('actif');
+    if (btn.dataset.vue === 'vue-carte') setTimeout(() => carte && carte.invalidateSize(), 100);
+  });
+});
+
+/* ============================================================
+   BASE DE CULTURES (13) — données indicatives, non scientifiques
+   ph: [min, max] | temp: [min, max °C] | pluie: [min, max mm/an] | texture: []
+   ============================================================ */
+const CULTURES = [
+  { nom: "Manioc", ph: [4.5, 7], temp: [20, 35], pluie: [600, 2000], texture: ["sableux", "limoneux"] },
+  { nom: "Maïs", ph: [5.5, 7.5], temp: [18, 32], pluie: [500, 1500], texture: ["limoneux", "argileux"] },
+  { nom: "Riz (pluvial)", ph: [5, 7], temp: [20, 35], pluie: [1000, 2500], texture: ["argileux", "limoneux"] },
+  { nom: "Igname", ph: [5, 7], temp: [20, 33], pluie: [1000, 1800], texture: ["limoneux", "sableux"] },
+  { nom: "Moringa", ph: [5, 8.5], temp: [20, 38], pluie: [300, 1500], texture: ["sableux", "limoneux", "argileux"] },
+  { nom: "Cacao", ph: [5, 7], temp: [21, 32], pluie: [1200, 2500], texture: ["limoneux", "argileux"] },
+  { nom: "Anacarde (cajou)", ph: [4.5, 7.5], temp: [20, 35], pluie: [400, 1500], texture: ["sableux", "limoneux"] },
+  { nom: "Arachide", ph: [5.5, 7], temp: [20, 32], pluie: [500, 1200], texture: ["sableux", "limoneux"] },
+  { nom: "Banane plantain", ph: [5.5, 7.5], temp: [20, 32], pluie: [1200, 2500], texture: ["limoneux", "argileux"] },
+  { nom: "Ananas", ph: [4.5, 6.5], temp: [20, 32], pluie: [800, 1800], texture: ["sableux", "limoneux"] },
+  { nom: "Patate douce", ph: [5, 7], temp: [18, 32], pluie: [500, 1500], texture: ["sableux", "limoneux"] },
+  { nom: "Haricot", ph: [5.5, 7.5], temp: [16, 28], pluie: [400, 1200], texture: ["limoneux", "argileux"] },
+  { nom: "Tomate", ph: [5.5, 7], temp: [16, 30], pluie: [400, 1200], texture: ["limoneux", "sableux"] }
+];
+
+/* ============================================================
+   DIAGNOSTIC — localisation, climat, sol, scoring
+   ============================================================ */
+let positionActuelle = null; // {lat, lon}
+
+document.getElementById('btn-geoloc').addEventListener('click', () => {
+  if (!navigator.geolocation) { alert("Géolocalisation non disponible sur cet appareil."); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    positionActuelle = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+    document.getElementById('bloc-sol').style.display = 'block';
+  }, () => alert("Impossible d'obtenir ta position. Utilise la recherche par ville."));
+});
+
+let timeoutRechercheVille;
+document.getElementById('champ-ville').addEventListener('input', (e) => {
+  clearTimeout(timeoutRechercheVille);
+  const q = e.target.value.trim();
+  const zoneSuggestions = document.getElementById('suggestions-ville');
+  if (q.length < 2) { zoneSuggestions.innerHTML = ''; return; }
+  timeoutRechercheVille = setTimeout(async () => {
+    try {
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=fr`);
+      const data = await res.json();
+      zoneSuggestions.innerHTML = '';
+      (data.results || []).forEach(r => {
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:8px;background:#f7f3e9;border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:13px;';
+        div.textContent = `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`;
+        div.addEventListener('click', () => {
+          positionActuelle = { lat: r.latitude, lon: r.longitude };
+          document.getElementById('champ-ville').value = div.textContent;
+          zoneSuggestions.innerHTML = '';
+          document.getElementById('bloc-sol').style.display = 'block';
+        });
+        zoneSuggestions.appendChild(div);
+      });
+    } catch (e) { /* silencieux, l'utilisateur peut réessayer */ }
+  }, 400);
+});
+
+document.getElementById('btn-lancer-diagnostic').addEventListener('click', lancerDiagnostic);
+
+async function lancerDiagnostic() {
+  if (!positionActuelle) { alert("Choisis d'abord ta position."); return; }
+  const zoneResultats = document.getElementById('resultats-diagnostic');
+  zoneResultats.innerHTML = '<div class="loader">Analyse du climat et du sol en cours...</div>';
+
+  let climat = null;
+  let sol = null;
+
+  // Climat via Open-Meteo Archive (moyenne sur la dernière année)
+  try {
+    const fin = new Date();
+    const debut = new Date();
+    debut.setFullYear(fin.getFullYear() - 1);
+    const fmt = d => d.toISOString().split('T')[0];
+    const res = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${positionActuelle.lat}&longitude=${positionActuelle.lon}&start_date=${fmt(debut)}&end_date=${fmt(fin)}&daily=temperature_2m_mean,precipitation_sum&timezone=auto`);
+    const data = await res.json();
+    const temps = data.daily.temperature_2m_mean.filter(v => v !== null);
+    const pluies = data.daily.precipitation_sum.filter(v => v !== null);
+    const tempMoy = temps.reduce((a, b) => a + b, 0) / temps.length;
+    const pluieTotale = pluies.reduce((a, b) => a + b, 0);
+    climat = { tempMoy, pluieTotale };
+  } catch (e) { /* on continue avec repli manuel si besoin */ }
+
+  // Sol via ISRIC SoilGrids
+  try {
+    const res = await fetch(`https://rest.isric.org/soilgrids/v2.0/properties/query?lon=${positionActuelle.lon}&lat=${positionActuelle.lat}&property=phh2o&property=clay&property=sand&depth=0-5cm&value=mean`);
+    const data = await res.json();
+    const couches = data.properties.layers;
+    const phLayer = couches.find(l => l.name === 'phh2o');
+    const clayLayer = couches.find(l => l.name === 'clay');
+    const sandLayer = couches.find(l => l.name === 'sand');
+    const phVal = phLayer.depths[0].values.mean / 10; // SoilGrids retourne pH*10
+    const clayVal = clayLayer.depths[0].values.mean;
+    const sandVal = sandLayer.depths[0].values.mean;
+    let texture = 'limoneux';
+    if (sandVal > 450) texture = 'sableux';
+    else if (clayVal > 350) texture = 'argileux';
+    sol = { ph: phVal, texture };
+  } catch (e) { /* repli manuel */ }
+
+  // Repli manuel si l'API sol a échoué ou si l'utilisateur a rempli les champs
+  const phManuel = document.getElementById('sol-ph').value;
+  const textureManuelle = document.getElementById('sol-texture').value;
+  if (!sol || phManuel || textureManuelle) {
+    sol = sol || {};
+    if (phManuel === 'acide') sol.ph = 5.5;
+    else if (phManuel === 'neutre') sol.ph = 6.8;
+    else if (phManuel === 'alcal
+               }
+
+  if (!climat || !sol || sol.ph === undefined || !sol.texture) {
+    zoneResultats.innerHTML = '<div class="disclaimer">Impossible de récupérer toutes les données automatiquement. Renseigne le pH et la texture manuellement ci-dessus puis relance le diagnostic.</div>';
+    return;
+  }
+
+  const histFertilite = document.getElementById('hist-fertilite').value;
+  const resultats = calculerScores(climat, sol, histFertilite);
+  afficherResultats(resultats);
+  document.getElementById('bloc-certif-question').style.display = 'block';
+}
+
+function calculerScores(climat, sol, fertilite) {
+  return CULTURES.map(c => {
+    let score = 100;
+    // pH
+    if (sol.ph < c.ph[0]) score -= (c.ph[0] - sol.ph) * 15;
+    else if (sol.ph > c.ph[1]) score -= (sol.ph - c.ph[1]) * 15;
+    // Température
+    if (climat.tempMoy < c.temp[0]) score -= (c.temp[0] - climat.tempMoy) * 4;
+    else if (climat.tempMoy > c.temp[1]) score -= (climat.tempMoy - c.temp[1]) * 4;
+    // Pluviométrie
+    if (climat.pluieTotale < c.pluie[0]) score -= (c.pluie[0] - climat.pluieTotale) / 15;
+    else if (climat.pluieTotale > c.pluie[1]) score -= (climat.pluieTotale - c.pluie[1]) / 25;
+    // Texture
+    if (!c.texture.includes(sol.texture)) score -= 15;
+    // Historique fertilité
+    if (fertilite === 'pauvre') score -= 8;
+    if (fertilite === 'fertile') score += 5;
+
+    score = Math.max(0, Math.min(100, Math.round(score)));
+    return { nom: c.nom, score };
+  }).sort((a, b) => b.score - a.score);
+}
+
+function couleurScore(score) {
+  if (score >= 70) return '#5c9765';
+  if (score >= 40) return '#b97a4f';
+  return '#7c4f30';
+}
+
+function afficherResultats(resultats) {
+  const zone = document.getElementById('resultats-diagnostic');
+  const html = resultats.slice(0, 8).map(r => `
+    <div class="resultat-culture">
+      <span class="nom">${r.nom}</span>
+      <span class="badge-pct" style="background:${couleurScore(r.score)}">${r.score}%</span>
+    </div>
+  `).join('');
+  zone.innerHTML = `<div class="carte-bloc"><h3 style="margin-top:0;color:var(--foret);font-family:'Fraunces',serif;font-weight:600;font-size:16px;">Cultures les plus adaptées</h3>${html}</div>`;
+}
+
+document.getElementById('btn-envoyer-carnet').addEventListener('click', () => {
+  document.getElementById('nt-notes').value = `Certification visée : ${document.getElementById('certif-souhaitee').selectedOptions[0].textContent}`;
+  document.querySelector('[data-vue="vue-terrains"]').click();
+  window.scrollTo(0, 0);
+});
+
+/* ============================================================
+   CARTE — Leaflet + dessin de parcelle
+   ============================================================ */
+let carte, groupeDessin, surfaceCourante = 0;
+
+function initCarte() {
+  carte = L.map('carte-leaflet').setView([7.5, -5.5], 6); // vue par défaut Côte d'Ivoire
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(carte);
+
+  groupeDessin = new L.FeatureGroup();
+  carte.addLayer(groupeDessin);
+
+  const controleDessin = new L.Control.Draw({
+    draw: {
+      polygon: true, polyline: false, rectangle: true, circle: false, marker: false, circlemarker: false
+    },
+    edit: { featureGroup: groupeDessin }
+  });
+  carte.addControl(controleDessin);
+
+  carte.on(L.Draw.Event.CREATED, (e) => {
+    groupeDessin.clearLayers();
+    groupeDessin.addLayer(e.layer);
+    const latlngs = e.layer.getLatLngs()[0];
+    const aireM2 = L.GeometryUtil.geodesicArea(latlngs);
+    surfaceCourante = aireM2 / 10000; // conversion en hectares
+    document.getElementById('surface-affichee').textContent = `Surface tracée : ${surfaceCourante.toFixed(2)} ha`;
+    document.getElementById('btn-surface-vers-carnet').disabled = false;
+  });
+
+  // Centrer sur la position si déjà connue
+  if (positionActuelle) carte.setView([positionActuelle.lat, positionActuelle.lon], 14);
+}
+
+document.getElementById('btn-surface-vers-carnet').addEventListener('click', () => {
+  document.getElementById('nt-superficie').value = surfaceCourante.toFixed(2);
+  document.querySelector('[data-vue="vue-terrains"]').click();
+  window.scrollTo(0, 0);
+});
+
+/* ============================================================
+   CARNET DE TERRAINS — localStorage
+   ============================================================ */
+function chargerTerrains() {
+  try { return JSON.parse(localStorage.getItem('agriia_terrains') || '[]'); }
+  catch (e) { return []; }
+}
+function sauvegarderTerrains(liste) {
+  localStorage.setItem('agriia_terrains', JSON.stringify(liste));
+}
+
+document.getElementById('btn-ajouter-terrain').addEventListener('click', () => {
+  const nom = document.getElementById('nt-nom').value.trim();
+  if (!nom) { alert("Donne un nom à ton terrain."); return; }
+  const terrains = chargerTerrains();
+  terrains.push({
+    id: 't' + Date.now(),
+    nom,
+    type: document.getElementById('nt-type').value,
+    numero: document.getElementById('nt-numero').value.trim(),
+    superficie: document.getElementById('nt-superficie').value.trim(),
+    notes: document.getElementById('nt-notes').value.trim()
+  });
+  sauvegarderTerrains(terrains);
+  ['nt-nom', 'nt-numero', 'nt-superficie', 'nt-notes'].forEach(id => document.getElementById(id).value = '');
+  afficherTerrains();
+});
+
+function afficherTerrains() {
+  const terrains = chargerTerrains();
+  const zone = document.getElementById('liste-terrains');
+  if (terrains.length === 0) {
+    zone.innerHTML = '<div class="vide">Aucun terrain enregistré pour l\'instant.</div>';
+    return;
+  }
+  zone.innerHTML = '';
+  terrains.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'carte-bloc terrain-card';
+    div.innerHTML = `
+      <button class="supprimer">Supprimer</button>
+      <h3>${t.nom}</h3>
+      <div class="meta">${t.type}${t.numero ? ' · ' + t.numero : ''}${t.superficie ? ' · ' + t.superficie + ' ha' : ''}</div>
+      ${t.notes ? `<div class="notes">${t.notes}</div>` : ''}
+      <div class="cert-section" id="cert-${t.id}">
+        <div class="cert-titre">Parcours certification</div>
+        <div class="cert-tabs">
+          <button class="cert-tab actif" data-label="bio">Bio (France)</button>
+          <button class="cert-tab" data-label="hve">HVE (France)</button>
+          <button class="cert-tab" data-label="usda">USDA Organic (USA)</button>
+        </div>
+        <div class="cert-progress-wrap"><div class="cert-progress-bar" style="width:0%"></div></div>
+        <div class="cert-progress-label"></div>
+        <ul class="cert-checklist"></ul>
+        <div class="cert-organisme"></div>
+      </div>
+    `;
+    div.querySelector('.supprimer').addEventListener('click', () => {
+      if (!confirm(`Supprimer "${t.nom}" ?`)) return;
+      sauvegarderTerrains(chargerTerrains().filter(x => x.id !== t.id));
+      afficherTerrains();
+    });
+    zone.appendChild(div);
+    initSectionCertification(t.id, div.querySelector(`#cert-${t.id}`));
+  });
+}
+
+/* ============================================================
+   PARCOURS CERTIFICATION (Bio / HVE / USDA — version simplifiée)
+   ============================================================ */
+const LABELS_CERTIFICATION = {
+  bio: {
+    nom: "Bio (France)",
+    organisme: 'Contact : <a href="https://www.agencebio.org" target="_blank">Agence Bio</a> — trouve un organisme certificateur agréé.',
+    criteres: [
+      { id: "bio1", texte: "Aucun intrant chimique de synthèse depuis 2-3 ans" },
+      { id: "bio2", texte: "Semences ou plants issus de l'agriculture biologique" },
+      { id: "bio3", texte: "Pas d'OGM utilisés" },
+      { id: "bio4", texte: "Registre des pratiques tenu à jour" },
+      { id: "bio5", texte: "Premier contact pris avec un organisme certificateur" }
+    ]
+  },
+  hve: {
+    nom: "HVE (France)",
+    organisme: 'Contact : <a href="https://agriculture.gouv.fr/la-certification-environnementale" target="_blank">Chambre d\'Agriculture</a> de ton département.',
+    criteres: [
+      { id: "hve1", texte: "Stratégie de limitation des produits phytosanitaires" },
+      { id: "hve2", texte: "Gestion raisonnée de la fertilisation" },
+      { id: "hve3", texte: "Gestion maîtrisée de la ressource en eau" },
+      { id: "hve4", texte: "Maintien d'infrastructures agroécologiques (haies, bandes enherbées)" }
+    ]
+  },
+  usda: {
+    nom: "USDA Organic (USA)",
+    organisme: 'Contact : <a href="https://www.ams.usda.gov/services/organic-certification" target="_blank">USDA National Organic Program</a>.',
+    criteres: [
+      { id: "usda1", texte: "Période de transition de 3 ans sans substances interdites" },
+      { id: "usda2", texte: "Plan de système biologique documenté" },
+      { id: "usda3", texte: "Pas d'OGM, boues d'épuration ou radiation ionisante" },
+      { id: "usda4", texte: "Zones tampons vis-à-vis des terrains non-bio voisins" },
+      { id: "usda5", texte: "Registres des semences, intrants et ventes tenus à jour" }
+    ]
+  }
+};
+
+function chargerCertifications() {
+  try { return JSON.parse(localStorage.getItem('agriia_certifications') || '{}'); }
+  catch (e) { return {}; }
+}
+function sauvegarderCertifications(data) {
+  localStorage.setItem('agriia_certifications', JSON.stringify(data));
+}
+
+function initSectionCertification(terrainId, container) {
+  let certifs = chargerCertifications();
+  if (!certifs[terrainId]) certifs[terrainId] = {};
+  let labelActif = 'bio';
+
+  const tabs = container.querySelectorAll('.cert-tab');
+  const checklist = container.querySelector('.cert-checklist');
+  const progressBar = container.querySelector('.cert-progress-bar');
+  const progressLabel = container.querySelector('.cert-progress-label');
+  const organismeDiv = container.querySelector('.cert-organisme');
+
+  function rendre() {
+    const label = LABELS_CERTIFICATION[labelActif];
+    const coches = certifs[terrainId][labelActif] || [];
+    checklist.innerHTML = '';
+    label.criteres.forEach(critere => {
+      const li = document.createElement('li');
+      const estCoche = coches.includes(critere.id);
+      li.innerHTML = `
+        <input type="checkbox" id="${terrainId}-${critere.id}" ${estCoche ? 'checked' : ''}>
+        <label for="${terrainId}-${critere.id}">${critere.texte}</label>
+      `;
+      li.querySelector('input').addEventListener('change', (e) => {
+        let liste = certifs[terrainId][labelActif] || [];
+        if (e.target.checked) liste.push(critere.id);
+        else liste = liste.filter(id => id !== critere.id);
+        certifs[terrainId][labelActif] = liste;
+        sauvegarderCertifications(certifs);
+        rendre();
+      });
+      checklist.appendChild(li);
+    });
+    const pct = Math.round((coches.length / label.criteres.length) * 100);
+    progressBar.style.width = pct + '%';
+    progressLabel.textContent = `${coches.length} / ${label.criteres.length} critères remplis`;
+    organismeDiv.innerHTML = label.organisme;
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('actif'));
+      tab.classList.add('actif');
+      labelActif = tab.dataset.label;
+      rendre();
+    });
+  });
+  rendre();
+}
+
+/* ============================================================
+   INITIALISATION
+   ============================================================ */
+initCarte();
+afficherTerrains();
+</script>
+</body>
+</html>
