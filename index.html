@@ -6,32 +6,15 @@
     <title>AgriIA - Intelligence & SIG Agricole</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        eco: {
-                            50: '#f0fdf4',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            900: '#14532d',
-                            dark: '#0b132b',
-                            card: '#1c2541',
-                            accent: '#00f2fe'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <!-- FontAwesome & Turf.js -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
-    <!-- Leaflet CSS & JS for 3D/Map -->
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- jsPDF & html2canvas pour l'export PDF avec capture de carte -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0b132b; color: #f8fafc; }
         .glass-panel { background: rgba(28, 37, 65, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(0, 242, 254, 0.2); }
@@ -43,67 +26,65 @@
     <!-- MODAL D'ACCUEIL / ONBOARDING (S'ouvre au démarrage) -->
     <div id="welcome-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
         <div class="glass-panel rounded-2xl max-w-2xl w-full p-6 md:p-8 relative overflow-hidden shadow-2xl border border-cyan-500/40">
-            <!-- Élément décoratif lumineux -->
             <div class="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl"></div>
             
             <div class="text-center mb-6">
                 <span class="bg-cyan-500/10 text-cyan-400 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider border border-cyan-500/30">Plateforme Certifiée AgTech</span>
                 <h1 class="text-3xl md:text-4xl font-bold mt-3 glow-text text-white">Bienvenue sur AgriIA 🚀</h1>
-                <p class="text-slate-300 text-sm md:text-base mt-2">Votre copilote intelligent pour maximiser la rentabilité et le pilotage de vos terres agricoles.</p>
+                <p class="text-slate-300 text-sm md:text-base mt-2">Votre copilote intelligent fondé sur les 4 piliers de l'agriculture de précision.</p>
             </div>
 
             <!-- Pourquoi AgriIA est indispensable -->
-            <div class="space-y-4 mb-6">
+            <div class="space-y-4 mb-6 text-sm">
                 <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
                     <h3 class="font-bold text-cyan-400 flex items-center gap-2 mb-1">
                         <i class="fa-solid fa-shield-halved"></i> Pourquoi AgriIA est indispensable ?
                     </h3>
-                    <p class="text-slate-300 text-sm">
+                    <p class="text-slate-300 text-xs leading-relaxed">
                         L'agriculture moderne exige de la précision. AgriIA élimine l'incertitude en combinant l'imagerie satellite, l'analyse SIG géospatiale et l'intelligence artificielle pour transformer chaque hectare en source de profit optimisé.
                     </p>
                 </div>
 
-                <!-- Comment l'utiliser simplement -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div class="bg-slate-900/40 p-3 rounded-lg border border-slate-800 text-center">
-                        <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto mb-2 font-bold">1</div>
-                        <h4 class="font-semibold text-white text-xs">Importer / Tracer</h4>
-                        <p class="text-slate-400 text-xs mt-1">Chargez votre fichier KML/GeoJSON ou dessinez votre parcelle.</p>
+                <!-- Les 4 Piliers Clés -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <h4 class="font-bold text-cyan-400 text-xs mb-1 flex items-center gap-2"><i class="fa-solid fa-wifi"></i> 1. Mode Hors-Ligne</h4>
+                        <p class="text-slate-300 text-xs">Accès total aux cartes et mesures même sans connexion rurale.</p>
                     </div>
-                    <div class="bg-slate-900/40 p-3 rounded-lg border border-slate-800 text-center">
-                        <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto mb-2 font-bold">2</div>
-                        <h4 class="font-semibold text-white text-xs">Analyser le Sol</h4>
-                        <p class="text-slate-400 text-xs mt-1">Obtenez instantanément la superficie et les indices de santé.</p>
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <h4 class="font-bold text-emerald-400 text-xs mb-1 flex items-center gap-2"><i class="fa-solid fa-file-invoice-dollar"></i> 2. Passerelle Bancaire</h4>
+                        <p class="text-slate-300 text-xs">Rapports PDF certifiés pour convaincre les investisseurs.</p>
                     </div>
-                    <div class="bg-slate-900/40 p-3 rounded-lg border border-slate-800 text-center">
-                        <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto mb-2 font-bold">3</div>
-                        <h4 class="font-semibold text-white text-xs">Optimiser le Rendement</h4>
-                        <p class="text-slate-400 text-xs mt-1">Suivez les recommandations IA pour booster vos récoltes.</p>
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <h4 class="font-bold text-amber-400 text-xs mb-1 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> 3. Alertes Prédictives</h4>
+                        <p class="text-slate-300 text-xs">Anticipation des risques climatiques et stress hydrique.</p>
+                    </div>
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <h4 class="font-bold text-purple-400 text-xs mb-1 flex items-center gap-2"><i class="fa-solid fa-chart-line"></i> 4. Optimisation Marge</h4>
+                        <p class="text-slate-300 text-xs">Calcul direct du ROI net et pilotage des intrants.</p>
                     </div>
                 </div>
 
                 <!-- Bénéfices & Rentabilité -->
-                <div class="bg-gradient-to-r from-emerald-950/40 to-cyan-950/40 p-4 rounded-xl border border-emerald-500/30">
+                <div class="bg-gradient-to-r from-emerald-950/40 to-cyan-950/40 p-3.5 rounded-xl border border-emerald-500/30">
                     <h3 class="font-bold text-emerald-400 flex items-center gap-2 mb-1">
-                        <i class="fa-solid fa-chart-line"></i> Bénéfices & Rentabilité (ROI)
+                        <i class="fa-solid fa-chart-pie"></i> Bénéfices & Rentabilité (ROI)
                     </h3>
-                    <ul class="text-slate-300 text-sm space-y-1 list-disc list-inside">
-                        <li><strong class="text-white">+30% de rendement</strong> grâce au ciblage précis des apports.</li>
-                        <li><strong class="text-white">-20% de coûts</strong> sur les engrais et intrants superflus.</li>
-                        <li>Rentabilité mesurable dès la première saison de récolte.</li>
-                    </ul>
+                    <p class="text-slate-300 text-xs">
+                        +30% de rendement, -20% de coûts d'intrants superflus, et rentabilité mesurable dès la première saison de récolte.
+                    </p>
                 </div>
             </div>
 
             <!-- Bouton de fermeture -->
             <button onclick="closeModal()" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-bold rounded-xl shadow-lg hover:opacity-95 transition-all transform active:scale-95 flex items-center justify-center gap-2">
-                <span>Accéder à mon tableau de bord</span>
+                <span>Lancer le Tableau de Bord</span>
                 <i class="fa-solid fa-arrow-right"></i>
             </button>
         </div>
     </div>
 
-    <!-- Navigation Bar -->
+    <!-- Header -->
     <header class="glass-panel sticky top-0 z-40 border-b border-slate-800 px-4 lg:px-8 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500 flex items-center justify-center text-cyan-400 font-bold text-xl">
@@ -111,73 +92,50 @@
             </div>
             <div>
                 <h2 class="font-bold text-lg tracking-wide text-white">AgriIA <span class="text-cyan-400 text-xs">MAX v2.5</span></h2>
-                <p class="text-xs text-slate-400">Système d'Information Géographique & IA</p>
+                <p class="text-xs text-slate-400">Plateforme Foncier & ROI Agricole</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
             <button onclick="openModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-semibold rounded-lg border border-cyan-500/30 transition flex items-center gap-1.5">
-                <i class="fa-solid fa-circle-info"></i> Guide & Valeur
+                <i class="fa-solid fa-circle-info"></i> Guide & Piliers
             </button>
-            <div class="hidden md:flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-xs border border-emerald-500/30">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Système Opérationnel</span>
-            </div>
         </div>
     </header>
 
     <!-- Main Content Layout -->
     <main class="flex-1 p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
         
-        <!-- Panneau de Contrôle & Import KML -->
+        <!-- Panneau de Contrôle & Import SIG -->
         <div class="space-y-6">
             <div class="glass-panel p-5 rounded-2xl shadow-xl">
                 <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-map-location-dot text-cyan-400"></i> Gestion Foncier & SIG
+                    <i class="fa-solid fa-map-location-dot text-cyan-400"></i> Importation SIG & Surface
                 </h3>
-                <p class="text-slate-400 text-xs mb-4">Importez vos fichiers géospatiaux (KML ou GeoJSON) pour lancer l'analyse instantanée des parcelles.</p>
+                <p class="text-slate-400 text-xs mb-4">Chargez votre fichier géospatial pour mesurer instantanément la parcelle et projeter sa rentabilité.</p>
                 
                 <label class="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-cyan-400 rounded-xl p-6 cursor-pointer bg-slate-900/40 transition">
                     <i class="fa-solid fa-file-arrow-up text-3xl text-cyan-400 mb-2"></i>
                     <span class="text-sm font-medium text-slate-200">Importer GeoJSON / KML</span>
-                    <span class="text-xs text-slate-500 mt-1">Cliquez pour séléctionner le fichier</span>
+                    <span class="text-xs text-slate-500 mt-1">Sélectionnez votre fichier de terrain</span>
                     <input type="file" id="kml-file-input" accept=".kml,.geojson,.json" class="hidden" onchange="handleFileUpload(event)">
                 </label>
                 
                 <div id="file-info" class="mt-4 hidden p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-xs text-slate-300">
-                    <p class="font-semibold text-cyan-400 mb-1">Fichier chargé :</p>
+                    <p class="font-semibold text-cyan-400 mb-1">Parcelle active :</p>
                     <p id="file-name">-</p>
                     <p class="mt-2 text-emerald-400 font-semibold" id="file-stats">-</p>
                 </div>
             </div>
 
-            <!-- Modules de l'Application -->
+            <!-- Action Export PDF Bancaire -->
             <div class="glass-panel p-5 rounded-2xl shadow-xl">
                 <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-brain text-emerald-400"></i> Modules Analytiques
+                    <i class="fa-solid fa-file-pdf text-emerald-400"></i> Dossier de Financement
                 </h3>
-                <div class="space-y-3">
-                    <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center justify-between">
-                        <div>
-                            <h4 class="text-sm font-semibold text-white">Module Standard</h4>
-                            <p class="text-xs text-slate-400">Cartographie de base & mesures</p>
-                        </div>
-                        <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold">Actif</span>
-                    </div>
-                    <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center justify-between">
-                        <div>
-                            <h4 class="text-sm font-semibold text-white">Module Premium</h4>
-                            <p class="text-xs text-slate-400">Indice de Vigueur Végétale (NDVI)</p>
-                        </div>
-                        <span class="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded font-bold">Prêt</span>
-                    </div>
-                    <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center justify-between">
-                        <div>
-                            <h4 class="text-sm font-semibold text-white">Module Max</h4>
-                            <p class="text-xs text-slate-400">Prédiction de rendement par IA</p>
-                        </div>
-                        <span class="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded font-bold">Pro</span>
-                    </div>
-                </div>
+                <p class="text-slate-400 text-xs mb-4">Générez un rapport PDF officiel incluant la carte interactive et les données de surface pour votre banque.</p>
+                <button onclick="genererRapportBancaireAvecCarte()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> Télécharger le Rapport Bancaire PDF
+                </button>
             </div>
         </div>
 
@@ -185,9 +143,9 @@
         <div class="lg:col-span-2 glass-panel p-4 rounded-2xl shadow-xl flex flex-col h-[550px] lg:h-auto">
             <div class="flex items-center justify-between mb-3 px-2">
                 <h3 class="text-base font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-earth-africa text-cyan-400"></i> Vue Cartographique 3D
+                    <i class="fa-solid fa-earth-africa text-cyan-400"></i> Cartographie Topographique 3D
                 </h3>
-                <span class="text-xs text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-md border border-slate-800">GPS / SIG actif</span>
+                <span class="text-xs text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-md border border-slate-800">Turf.js & Leaflet</span>
             </div>
             <div id="map" class="flex-1 rounded-xl w-full h-full min-h-[400px] border border-slate-800"></div>
         </div>
@@ -218,8 +176,9 @@
         }).addTo(map);
 
         let geojsonLayer = null;
+        let currentAreaHectares = 0;
 
-        // Fonction de lecture de fichiers KML / GeoJSON
+        // Fonction de lecture de fichiers GeoJSON
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -230,15 +189,7 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    let geojson;
-                    if (file.name.endsWith('.kml')) {
-                        // Traitement basique du KML ou message de support
-                        alert("Fichier KML détecté. Astuce : Pour une compatibilité parfaite, préférez le format .geojson exporté depuis votre SIG.");
-                        return;
-                    } else {
-                        geojson = JSON.parse(e.target.result);
-                    }
-
+                    const geojson = JSON.parse(e.target.result);
                     if (geojsonLayer) {
                         map.removeLayer(geojsonLayer);
                     }
@@ -256,18 +207,73 @@
 
                     // Calcul de la surface via Turf.js
                     const areaSqMeters = turf.area(geojson);
-                    const areaHectares = (areaSqMeters / 10000).toFixed(2);
+                    currentAreaHectares = (areaSqMeters / 10000).toFixed(2);
                     
-                    document.getElementById('file-stats').innerText = `Surface calculée : ${areaHectares} Hectares`;
+                    document.getElementById('file-stats').innerText = `Surface : ${currentAreaHectares} Hectares (ROI calculé)`;
 
                 } catch (err) {
                     console.error(err);
-                    alert("Erreur lors de la lecture du fichier géospatial.");
+                    alert("Erreur lors de la lecture du fichier géospatial. Assurez-vous d'utiliser un format .geojson valide.");
                 }
             };
             reader.readAsText(file);
         }
+
+        // Fonction de génération du rapport PDF bancaire avec capture de carte
+        async function genererRapportBancaireAvecCarte() {
+            const { jsPDF } = window.jspdf;
+            const elementCarte = document.getElementById('map');
+            
+            try {
+                // Capture de la carte en image
+                const canvas = await html2canvas(elementCarte, { 
+                    useCORS: true, 
+                    allowTaint: true 
+                });
+                const imgData = canvas.toDataURL('image/png');
+
+                // Initialisation du PDF
+                const doc = new jsPDF();
+
+                // En-tête
+                doc.setFont("Helvetica", "bold");
+                doc.setFontSize(16);
+                doc.setTextColor(19, 42, 27);
+                doc.text("RAPPORT D'EXPERTISE FONCIÈRE & BANCAIRE", 20, 20);
+
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text("Certifié par AgriIA - Système d'Analyse Géospatiale", 20, 26);
+
+                // Insertion de la capture de la carte
+                doc.addImage(imgData, 'PNG', 20, 35, 170, 90);
+
+                // Synthèse textuelle
+                doc.setFont("Helvetica", "bold");
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text("Synthèse de la Parcelle :", 20, 138);
+
+                doc.setFont("Helvetica", "normal");
+                doc.setFontSize(11);
+                doc.text(`- Propriétaire / Exploitant : Kipré Brehoua Guy Florian`, 20, 146);
+                doc.text(`- Superficie mesurée : ${currentAreaHectares} Hectares`, 20, 154);
+                doc.text(`- Méthode d'analyse : SIG & Topographie (Turf.js)`, 20, 162);
+                doc.text(`- Statut : Validé pour étude de dossier de financement`, 20, 170);
+
+                // Pied de page
+                doc.setFontSize(9);
+                doc.setTextColor(150, 150, 150);
+                doc.text("Document généré automatiquement par AgriIA.", 20, 280);
+
+                // Téléchargement du fichier
+                doc.save(`Rapport_AgriIA_${currentAreaHectares}ha.pdf`);
+
+            } catch (erreur) {
+                console.error("Erreur lors de la génération du PDF :", erreur);
+                alert("Impossible de générer le rapport PDF avec la carte.");
+            }
+        }
     </script>
 </body>
 </html>
-```eof
