@@ -162,6 +162,41 @@
   .cert-organisme a { color: var(--foret); font-weight: 600; }
 
   .vide { text-align: center; color: var(--texte-doux); padding: 32px 10px; font-size: 14px; }
+
+  .plan-carte {
+    background: #fff; border: 2px solid var(--sauge); border-radius: 20px;
+    padding: 20px; margin-bottom: 16px; position: relative;
+  }
+  .plan-carte.pro { border-color: var(--amber, #d9a441); background: linear-gradient(180deg, #fffdf7 0%, #fff 100%); }
+  .plan-badge {
+    position: absolute; top: -11px; right: 18px; background: var(--terracotta, #c1682f);
+    color: #fff; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 12px;
+    text-transform: uppercase; letter-spacing: .4px;
+  }
+  .plan-nom { font-family: 'Fraunces', serif; font-style: italic; font-weight: 600; font-size: 19px; color: var(--foret); margin: 0 0 2px; }
+  .plan-prix { font-size: 26px; font-weight: 700; color: var(--foret); margin: 6px 0 14px; }
+  .plan-prix span { font-size: 13px; font-weight: 500; color: var(--texte-doux); }
+  .plan-liste { list-style: none; padding: 0; margin: 0 0 16px; }
+  .plan-liste li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13.5px; }
+  .plan-liste .coche { color: var(--feuille); font-weight: 700; flex-shrink: 0; }
+  .plan-liste .verrou { color: var(--texte-doux); flex-shrink: 0; }
+  .plan-liste li.non-inclus { color: var(--texte-doux); }
+
+  .badge-pro-inline {
+    display: inline-flex; align-items: center; gap: 3px; background: var(--terre-clair);
+    color: var(--terre-fonce); font-size: 10.5px; font-weight: 700; padding: 2px 8px;
+    border-radius: 8px; text-transform: uppercase; letter-spacing: .3px; margin-left: 6px;
+  }
+  .fonction-verrouillee {
+    background: #f9faf5; border: 1px dashed var(--sauge); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .fonction-verrouillee .fv-texte { font-size: 13px; color: var(--texte-doux); }
+  .fonction-verrouillee .fv-texte strong { color: var(--texte); display: block; font-size: 13.5px; margin-bottom: 2px; }
+  .fonction-verrouillee button { width: auto; padding: 8px 14px; font-size: 12px; margin: 0; white-space: nowrap; }
+
+  .statut-compte { text-align: center; font-size: 12.5px; color: var(--texte-doux); margin-bottom: 14px; }
+  .statut-compte strong { color: var(--foret); }
 </style>
 </head>
 <body>
@@ -218,6 +253,7 @@
     </div>
 
     <div id="resultats-diagnostic"></div>
+    <div id="bloc-premium-diagnostic"></div>
 
     <div class="carte-bloc" id="bloc-certif-question" style="display:none;">
       <label class="champ-label">Veux-tu viser une certification pour ce terrain ?</label>
@@ -277,12 +313,88 @@
     </div>
 
     <div id="liste-terrains"></div>
+
+    <div class="carte-bloc">
+      <label class="champ-label">Avec l'Espace Premium</label>
+      <div class="fonction-verrouillee">
+        <div class="fv-texte"><strong>📄 Rapport technique approfondi</strong>Analyse détaillée du climat, du sol et des cultures adaptées</div>
+        <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+      </div>
+      <div class="fonction-verrouillee">
+        <div class="fv-texte"><strong>⚠️ Score de risques environnementaux</strong>Sécheresse, érosion, appauvrissement du sol</div>
+        <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+      </div>
+      <div class="fonction-verrouillee">
+        <div class="fv-texte"><strong>💰 Estimateur de rentabilité</strong>Rendement et potentiel financier indicatifs par culture</div>
+        <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+      </div>
+      <div class="fonction-verrouillee">
+        <div class="fv-texte"><strong>📑 Rapport PDF officiel</strong>Document téléchargeable pour banque ou investisseur</div>
+        <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VUE ABONNEMENT ============ -->
+  <section id="vue-abonnement" class="vue">
+    <h2 class="titre-section">Espace Premium</h2>
+    <div class="statut-compte" id="statut-compte">Statut actuel : <strong>Gratuit</strong></div>
+
+    <div class="plan-carte">
+      <div class="plan-nom">Gratuit</div>
+      <div class="plan-prix">0€ <span>/ toujours</span></div>
+      <ul class="plan-liste">
+        <li><span class="coche">✓</span> Diagnostic terrain (climat, sol, cultures adaptées)</li>
+        <li><span class="coche">✓</span> Carte interactive + calcul de surface</li>
+        <li><span class="coche">✓</span> Import GeoJSON / KML</li>
+        <li><span class="coche">✓</span> Carnet de terrains — jusqu'à 2 terrains</li>
+        <li class="non-inclus"><span class="verrou">🔒</span> Rapport technique professionnel approfondi</li>
+        <li class="non-inclus"><span class="verrou">🔒</span> Score de risques environnementaux détaillé</li>
+        <li class="non-inclus"><span class="verrou">🔒</span> Estimateur de rentabilité des cultures</li>
+        <li class="non-inclus"><span class="verrou">🔒</span> Génération de rapport PDF officiel (banques/investisseurs)</li>
+      </ul>
+    </div>
+
+    <div class="plan-carte pro">
+      <div class="plan-badge">Recommandé</div>
+      <div class="plan-nom">Abonnement Premium</div>
+      <div class="plan-prix">19€ <span>/ mois</span></div>
+      <ul class="plan-liste">
+        <li><span class="coche">✓</span> Tout le plan Gratuit</li>
+        <li><span class="coche">✓</span> Carnet de terrains <strong>illimité</strong></li>
+        <li><span class="coche">✓</span> Rapport technique professionnel approfondi</li>
+        <li><span class="coche">✓</span> Score de risques environnementaux détaillé</li>
+        <li><span class="coche">✓</span> Estimateur de rentabilité des cultures</li>
+        <li><span class="coche">✓</span> Rapports PDF illimités</li>
+      </ul>
+      <button class="btn" id="btn-activer-abonnement">S'abonner — 19€/mois</button>
+    </div>
+
+    <div class="plan-carte">
+      <div class="plan-nom">Rapport unique</div>
+      <div class="plan-prix">29€ <span>/ paiement à l'acte</span></div>
+      <ul class="plan-liste">
+        <li><span class="coche">✓</span> Un rapport complet pour un terrain de ton choix</li>
+        <li><span class="coche">✓</span> Rapport technique + score de risques + rentabilité</li>
+        <li><span class="coche">✓</span> Export PDF officiel inclus</li>
+        <li class="non-inclus"><span class="verrou">🔒</span> Sans engagement, sans renouvellement</li>
+      </ul>
+      <button class="btn secondaire" id="btn-activer-unique">Acheter le rapport — 29€</button>
+    </div>
+
+    <button class="btn contour" id="btn-desactiver-premium" style="display:none;">Repasser en Gratuit (test)</button>
+
+    <div class="disclaimer">
+      Le paiement en ligne n'est pas encore branché — ces boutons simulent l'activation pour tester l'interface. Le vrai système de paiement sera ajouté avant la mise en ligne publique. Les rapports (risques, rentabilité) restent des estimations indicatives basées sur des données publiques : à faire valider par un professionnel avant toute décision bancaire ou d'investissement.
+    </div>
+
   </section>
 
   <nav class="bottom-nav">
     <button data-vue="vue-diagnostic" class="actif"><span class="icone">🔍</span>Diagnostic</button>
     <button data-vue="vue-carte"><span class="icone">🗺️</span>Carte & Import</button>
     <button data-vue="vue-terrains"><span class="icone">📋</span>Mes terrains</button>
+    <button data-vue="vue-abonnement"><span class="icone">⭐</span>Abonnement</button>
   </nav>
 </div>
 
@@ -290,6 +402,69 @@
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/togeojson@0.16.0/togeojson.js"></script>
 <script>
+/* ============================================================
+   ABONNEMENT — statut Gratuit / Pro (simulation locale)
+   ============================================================ */
+const LIMITE_TERRAINS_GRATUIT = 2;
+
+function estPremium() {
+  return localStorage.getItem('agriia_premium') === '1';
+}
+
+function majAffichageAbonnement() {
+  const statut = document.getElementById('statut-compte');
+  const btnAbo = document.getElementById('btn-activer-abonnement');
+  const btnUnique = document.getElementById('btn-activer-unique');
+  const btnDesactiver = document.getElementById('btn-desactiver-premium');
+  const type = localStorage.getItem('agriia_type_premium');
+  if (estPremium()) {
+    statut.innerHTML = type === 'unique'
+      ? 'Statut actuel : <strong>Rapport unique acheté ⭐</strong>'
+      : 'Statut actuel : <strong>Abonnement Premium actif ⭐</strong>';
+    btnAbo.textContent = 'Déjà activé';
+    btnAbo.disabled = true;
+    btnUnique.textContent = 'Déjà activé';
+    btnUnique.disabled = true;
+    btnDesactiver.style.display = 'block';
+  } else {
+    statut.innerHTML = 'Statut actuel : <strong>Gratuit</strong>';
+    btnAbo.textContent = "S'abonner — 19€/mois";
+    btnAbo.disabled = false;
+    btnUnique.textContent = "Acheter le rapport — 29€";
+    btnUnique.disabled = false;
+    btnDesactiver.style.display = 'none';
+  }
+}
+
+function activerPremium(type) {
+  localStorage.setItem('agriia_premium', '1');
+  localStorage.setItem('agriia_type_premium', type);
+  majAffichageAbonnement();
+  afficherTerrains();
+  if (document.getElementById('resultats-diagnostic').innerHTML.trim() !== '') {
+    document.getElementById('bloc-premium-diagnostic').style.display = 'block';
+  }
+  alert(type === 'unique'
+    ? "Rapport unique activé (simulation). Tu peux maintenant générer le rapport complet pour un terrain."
+    : "Abonnement Premium activé (simulation). Toutes les fonctionnalités premium sont désormais débloquées.");
+}
+
+document.getElementById('btn-activer-abonnement').addEventListener('click', () => activerPremium('abonnement'));
+document.getElementById('btn-activer-unique').addEventListener('click', () => activerPremium('unique'));
+
+document.getElementById('btn-desactiver-premium').addEventListener('click', () => {
+  localStorage.removeItem('agriia_premium');
+  localStorage.removeItem('agriia_type_premium');
+  majAffichageAbonnement();
+  afficherTerrains();
+  const blocPremium = document.getElementById('bloc-premium-diagnostic');
+  if (blocPremium) blocPremium.style.display = 'none';
+});
+
+document.querySelectorAll('.bottom-nav [data-vue="vue-abonnement"]').forEach(b => {
+  b.addEventListener('click', majAffichageAbonnement);
+});
+
 /* ============================================================
    NAVIGATION ENTRE ONGLETS
    ============================================================ */
@@ -326,6 +501,7 @@ const CULTURES = [
    DIAGNOSTIC — localisation, climat, sol, scoring
    ============================================================ */
 let positionActuelle = null;
+let dernierDiagnostic = null;
 
 document.getElementById('btn-geoloc').addEventListener('click', () => {
   if (!navigator.geolocation) { alert("Géolocalisation non disponible sur cet appareil."); return; }
@@ -418,8 +594,13 @@ async function lancerDiagnostic() {
   }
 
   const histFertilite = document.getElementById('hist-fertilite').value;
+  const histCultive = document.getElementById('hist-cultive').value;
   const resultats = calculerScores(climat, sol, histFertilite);
+
+  dernierDiagnostic = { climat, sol, resultats, histFertilite, histCultive, position: { ...positionActuelle } };
+
   afficherResultats(resultats);
+  afficherBlocPremiumDiagnostic();
   document.getElementById('bloc-certif-question').style.display = 'block';
 }
 
@@ -577,6 +758,11 @@ document.getElementById('btn-ajouter-terrain').addEventListener('click', () => {
   const nom = document.getElementById('nt-nom').value.trim();
   if (!nom) { alert("Donne un nom à ton terrain."); return; }
   const terrains = chargerTerrains();
+  if (!estPremium() && terrains.length >= LIMITE_TERRAINS_GRATUIT) {
+    alert(`Le plan Gratuit permet d'enregistrer jusqu'à ${LIMITE_TERRAINS_GRATUIT} terrains. Passe en Premium pour un carnet illimité.`);
+    document.querySelector('[data-vue="vue-abonnement"]').click();
+    return;
+  }
   terrains.push({
     id: 't' + Date.now(),
     nom,
@@ -729,6 +915,7 @@ function initSectionCertification(terrainId, container) {
    ============================================================ */
 initCarte();
 afficherTerrains();
+majAffichageAbonnement();
 
 /* ============================================================
    PWA
