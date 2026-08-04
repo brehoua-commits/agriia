@@ -194,6 +194,39 @@
   .plan-liste .coche { color: var(--feuille-clair); font-weight: 700; flex-shrink: 0; }
   .plan-liste .verrou { color: var(--texte-doux); flex-shrink: 0; }
   .plan-liste li.non-inclus { color: var(--texte-doux); }
+  .legende-plans {
+    text-align: center; font-size: 11.5px; color: var(--texte-doux);
+    margin: 0 0 14px; letter-spacing: .2px;
+  }
+  .plan-liste li.ligne-dev { flex-wrap: wrap; justify-content: space-between; color: var(--texte-doux); row-gap: 6px; }
+  .plan-liste li.ligne-dev > span:first-child { flex: 1 1 auto; }
+  .badge-roadmap {
+    display: inline-flex; align-items: center; background: rgba(251,191,36,0.15); color: var(--amber);
+    font-size: 10px; font-weight: 700; padding: 5px 10px; border-radius: 8px;
+    text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; flex-shrink: 0;
+    border: none; cursor: pointer; font-family: inherit; min-height: 30px;
+  }
+  .badge-roadmap:active { opacity: .7; }
+  .plan-repere-dev {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; color: var(--amber); margin: -6px 0 12px;
+  }
+
+  /* -------- FAQ accordéon -------- */
+  .faq-item { border-bottom: 1px solid var(--sauge); }
+  .faq-item:last-child { border-bottom: none; }
+  .faq-question {
+    width: 100%; min-height: 44px; background: none; border: none; font-family: inherit;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 12px 2px; font-size: 13.5px; font-weight: 600; color: var(--texte);
+    text-align: left; cursor: pointer;
+  }
+  .faq-chevron { color: var(--feuille); flex-shrink: 0; transition: transform .25s; font-size: 13px; }
+  .faq-item.ouvert .faq-chevron { transform: rotate(180deg); }
+  .faq-reponse { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+  .faq-reponse p { margin: 0 2px 14px; font-size: 13px; line-height: 1.55; color: var(--texte-doux); }
+  .faq-item.ouvert .faq-reponse { max-height: 400px; }
+  .faq-item.cible .faq-question { color: var(--amber); }
 
   .badge-pro-inline {
     display: inline-flex; align-items: center; gap: 3px; background: rgba(0,242,254,0.12);
@@ -495,6 +528,8 @@
       <div class="pilier-chip"><span class="pilier-icone">📈</span><strong>Optimisation ROI</strong>Rendement &amp; marge</div>
     </div>
 
+    <div class="legende-plans">🟢 Disponible dès aujourd'hui · 🟠 En développement</div>
+
     <div class="plan-carte">
       <div class="plan-nom">Standard</div>
       <div class="plan-prix">0€ <span>/ toujours</span></div>
@@ -515,12 +550,15 @@
       <div class="plan-prix">19€ <span>/ mois</span></div>
       <ul class="plan-liste">
         <li><span class="coche">✓</span> Tout le plan Standard</li>
-        <li><span class="coche">✓</span> Terrains illimités (carnet cloud)</li>
-        <li><span class="coche">✓</span> Calendrier agro-météorologique dynamique</li>
+        <li><span class="coche">✓</span> Terrains illimités dans ton carnet (stockage local)</li>
+        <li><span class="coche">✓</span> Calendrier météo à 7 jours</li>
         <li><span class="coche">✓</span> Score de risques environnementaux détaillé</li>
-        <li><span class="coche">✓</span> Rapports PDF officiels illimités (banques)</li>
-        <li class="non-inclus"><span class="verrou">🔒</span> IA Botaniste &amp; imagerie satellite NDVI</li>
-        <li class="non-inclus"><span class="verrou">🔒</span> Projection de chiffre d'affaires</li>
+        <li><span class="coche">✓</span> Rapport technique détaillé du terrain</li>
+        <li><span class="coche">✓</span> Export PDF téléchargeable</li>
+        <li class="ligne-dev">
+          <span>Synchronisation cloud multi-appareils</span>
+          <button type="button" class="badge-roadmap" onclick="ouvrirFaqDepuisBadge('faq-stockage-local')">🟠 En développement</button>
+        </li>
       </ul>
       <button class="btn" id="btn-activer-premium">Passer en Premium — 19€/mois</button>
     </div>
@@ -529,16 +567,67 @@
       <div class="plan-badge badge-max">Expert</div>
       <div class="plan-nom">Max</div>
       <div class="plan-prix">39€ <span>/ mois</span></div>
+      <div class="plan-repere-dev">🛠️ 2 fonctionnalités en cours de développement</div>
       <ul class="plan-liste">
         <li><span class="coche">✓</span> Tout le plan Premium</li>
-        <li><span class="coche">✓</span> IA Botaniste — diagnostic de maladies par photo</li>
-        <li><span class="coche">✓</span> Imagerie NDVI satellite</li>
-        <li><span class="coche">✓</span> Estimateur de rendement &amp; projection de chiffre d'affaires</li>
+        <li><span class="coche">✓</span> Estimateur de rendement &amp; chiffre d'affaires par culture</li>
+        <li class="ligne-dev">
+          <span>IA Botaniste — diagnostic de maladies par photo</span>
+          <button type="button" class="badge-roadmap" onclick="ouvrirFaqDepuisBadge('faq-ia-ndvi')">🟠 En développement</button>
+        </li>
+        <li class="ligne-dev">
+          <span>Imagerie satellite NDVI</span>
+          <button type="button" class="badge-roadmap" onclick="ouvrirFaqDepuisBadge('faq-ia-ndvi')">🟠 En développement</button>
+        </li>
       </ul>
       <button class="btn secondaire" id="btn-activer-max">Passer en Max — 39€/mois</button>
     </div>
 
     <button class="btn contour" id="btn-desactiver-premium" style="display:none;">Repasser en Standard (test)</button>
+
+    <div class="carte-bloc">
+      <h3 class="cert-titre" style="margin-bottom:12px;">Questions fréquentes</h3>
+
+      <div class="faq-item" id="faq-stockage-local">
+        <button class="faq-question" aria-expanded="false">
+          <span>Où sont stockées les données de mon carnet de terrains ?</span>
+          <span class="faq-chevron">▾</span>
+        </button>
+        <div class="faq-reponse">
+          <p>Tes terrains, notes et parcours de certification sont enregistrés directement sur ton appareil (stockage local du navigateur), pas sur un serveur. C'est rapide et ça fonctionne hors-ligne, mais les données restent propres à cet appareil et ce navigateur : elles ne se synchronisent pas encore automatiquement entre ton téléphone et ton ordinateur. La synchronisation cloud multi-appareils est en cours de développement.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-ia-ndvi">
+        <button class="faq-question" aria-expanded="false">
+          <span>Quand seront disponibles l'IA Botaniste et l'imagerie NDVI ?</span>
+          <span class="faq-chevron">▾</span>
+        </button>
+        <div class="faq-reponse">
+          <p>Ces deux fonctionnalités sont en cours de développement. Elles nécessitent de connecter des services externes — analyse d'image pour détecter les maladies, fournisseur d'imagerie satellite pour le NDVI — qui ne sont pas encore intégrés à l'app. Elles seront ajoutées au plan Max dès qu'elles seront prêtes.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-securite">
+        <button class="faq-question" aria-expanded="false">
+          <span>Mes données sont-elles sécurisées ?</span>
+          <span class="faq-chevron">▾</span>
+        </button>
+        <div class="faq-reponse">
+          <p>Comme les données restent en local sur ton appareil, elles ne transitent par aucun serveur externe et ne sont visibles par personne d'autre que toi. En contrepartie, elles peuvent être perdues si tu vides le cache du navigateur, changes d'appareil ou désinstalles l'app avant l'arrivée de la synchronisation cloud — pense à exporter tes rapports PDF importants en attendant.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-sauvegarde-pdf">
+        <button class="faq-question" aria-expanded="false">
+          <span>Dois-je faire une sauvegarde de mes rapports PDF ?</span>
+          <span class="faq-chevron">▾</span>
+        </button>
+        <div class="faq-reponse">
+          <p>Oui, c'est recommandé tant que la synchronisation cloud n'est pas disponible. Le rapport PDF (plans Premium et Max) capture un instantané complet de ton diagnostic — climat, sol, cultures recommandées, risques — que tu peux conserver de ton côté ou partager avec ta banque, indépendamment du stockage local de l'app.</p>
+        </div>
+      </div>
+    </div>
 
     <div class="disclaimer">
       Le paiement en ligne n'est pas encore branché — ces boutons simulent l'activation pour tester l'interface. L'IA Botaniste et l'imagerie NDVI nécessitent des services externes (analyse d'image, fournisseur satellite) pas encore connectés — elles sont présentées ici en aperçu "Bientôt disponible". Les rapports (risques, rentabilité, chiffre d'affaires) restent des estimations indicatives basées sur des données publiques : à faire valider par un professionnel avant toute décision bancaire ou d'investissement.
@@ -617,6 +706,33 @@ document.getElementById('btn-desactiver-premium').addEventListener('click', () =
 document.querySelectorAll('.bottom-nav [data-vue="vue-abonnement"]').forEach(b => {
   b.addEventListener('click', majAffichageAbonnement);
 });
+
+/* ============================================================
+   FAQ — accordéon vanilla JS
+   ============================================================ */
+function basculerFaq(item, forcerOuvert) {
+  const bouton = item.querySelector('.faq-question');
+  const doitOuvrir = typeof forcerOuvert === 'boolean' ? forcerOuvert : !item.classList.contains('ouvert');
+  item.classList.toggle('ouvert', doitOuvrir);
+  bouton.setAttribute('aria-expanded', String(doitOuvrir));
+}
+
+document.querySelectorAll('.faq-question').forEach(bouton => {
+  bouton.addEventListener('click', () => basculerFaq(bouton.closest('.faq-item')));
+});
+
+function ouvrirFaqDepuisBadge(idFaq) {
+  const item = document.getElementById(idFaq);
+  if (!item) return;
+  document.querySelector('[data-vue="vue-abonnement"]').click();
+  basculerFaq(item, true);
+  document.querySelectorAll('.faq-item.cible').forEach(el => el.classList.remove('cible'));
+  item.classList.add('cible');
+  setTimeout(() => {
+    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 80);
+  setTimeout(() => item.classList.remove('cible'), 2200);
+}
 
 /* ============================================================
    ONBOARDING PAGINÉ
