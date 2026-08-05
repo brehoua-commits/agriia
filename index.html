@@ -1,0 +1,2620 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AgriIA — Cultive juste</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#223c28">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AgriIA">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root {
+    /* Charte graphique v2 — 6 couleurs de marque + 1 sémantique */
+    --fond: #0d0d0b;
+    --carbone: #191915;
+    --os: #f2f0ea;
+    --gris-doux: #8c887e;
+    --chlorophylle: #5ea85a;
+    --argile: #c17a4e;
+    --brique: #b3503f;
+    --bordure: rgba(255,255,255,0.08);
+
+    /* Tokens motion design */
+    --easing-entree: cubic-bezier(0.22, 1, 0.36, 1);
+    --easing-sortie: cubic-bezier(0.4, 0, 1, 1);
+    --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --easing-confirmation: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --duree-micro: 150ms;
+    --duree-panneau: 380ms;
+    --duree-sortie: 220ms;
+    --duree-transition-champ: 220ms;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--fond);
+    color: var(--os);
+  }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  header {
+    border-bottom: 1px solid var(--bordure);
+    color: #fff;
+    padding: 26px 22px 20px;
+    flex-shrink: 0;
+  }
+  header h1 {
+    margin: 0; font-size: 26px; line-height: 1.2;
+    font-weight: 800; letter-spacing: -0.5px;
+  }
+  header p { margin: 7px 0 0; font-size: 13.5px; opacity: 0.75; letter-spacing: 0.2px; color: var(--gris-doux); }
+
+  .vue { display: none; flex: 1; overflow-y: auto; padding: 18px 16px; padding-bottom: 104px; }
+  .vue.active { display: block; }
+
+  .bandeau-identite {
+    display: flex; align-items: center; gap: 9px; flex-shrink: 0;
+    background: rgba(94,168,90,0.08); border-bottom: 1px solid transparent;
+    padding: 0 16px; font-size: 12.5px; color: var(--os);
+    max-height: 0; opacity: 0; overflow: hidden;
+    transition: max-height var(--duree-panneau) var(--easing-entree),
+                opacity 220ms var(--easing-standard),
+                padding var(--duree-panneau) var(--easing-entree),
+                border-color 220ms var(--easing-standard);
+  }
+  .bandeau-identite.visible {
+    max-height: 60px; opacity: 1; padding-top: 10px; padding-bottom: 10px;
+    border-bottom-color: var(--gris-doux);
+  }
+  .bandeau-identite .bandeau-icone { font-size: 15px; flex-shrink: 0; }
+  .bandeau-identite .bandeau-texte { flex: 1 1 auto; line-height: 1.35; }
+  .bandeau-identite .bandeau-modifier {
+    background: none; border: none; color: var(--chlorophylle); font-weight: 700;
+    font-size: 12px; cursor: pointer; padding: 6px 4px; flex-shrink: 0; font-family: inherit;
+    text-decoration: underline; text-underline-offset: 2px;
+    transition: color var(--duree-micro) var(--easing-standard),
+                transform 100ms var(--easing-standard);
+  }
+  .bandeau-identite .bandeau-modifier:active { transform: scale(0.94); }
+
+  .compteur-terrains-gestionnaire {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--carbone); border: 1px solid var(--argile); border-radius: 14px;
+    padding: 12px 14px; margin-bottom: 14px; font-size: 12.5px; color: var(--os);
+  }
+  .compteur-terrains-gestionnaire .ctg-label strong { color: var(--argile); }
+  .compteur-terrains-gestionnaire button { width: auto; padding: 8px 12px; font-size: 11.5px; margin: 0; white-space: nowrap; }
+
+  .teaser-roi-carte {
+    border: 1px dashed var(--argile); border-radius: 14px; padding: 14px; margin-top: 4px;
+    background: rgba(193,122,78,0.05); text-align: center;
+  }
+  .teaser-roi-carte .tr-titre { font-weight: 700; color: #fff; font-size: 13.5px; margin-bottom: 4px; }
+  .teaser-roi-carte .tr-texte { font-size: 12px; color: var(--gris-doux); margin-bottom: 10px; line-height: 1.4; }
+  .teaser-roi-carte button { width: auto; padding: 8px 16px; font-size: 12px; margin: 0 auto; }
+
+  @keyframes glisser-apparition {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  #compteur-terrains-gestionnaire, #teaser-roi-carte {
+    animation: glisser-apparition var(--duree-panneau) var(--easing-entree) both;
+  }
+
+  .reordre-sortie {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 140ms var(--easing-standard), transform 140ms var(--easing-standard);
+  }
+
+  /* -------- Mise en avant sans glow (Option A — respiration par ombre neutre) -------- */
+  @keyframes respiration-elevation {
+    0%, 100% { transform: scale(1);     box-shadow: 0 2px 6px rgba(0,0,0,0.10); }
+    50%      { transform: scale(1.006); box-shadow: 0 10px 22px rgba(0,0,0,0.20); }
+  }
+  .mise-en-avant {
+    animation: respiration-elevation 3200ms ease-in-out infinite;
+  }
+
+  /* -------- Micro-feedback tactile cartes plates -------- */
+  .carte-plate, .carte-bloc, .plan-carte, .terrain-card, .teaser-premium {
+    transition: transform 100ms var(--easing-standard),
+                box-shadow 140ms var(--easing-standard),
+                border-color 140ms var(--easing-standard);
+  }
+  .carte-plate:hover, .carte-bloc:hover, .plan-carte:hover, .terrain-card:hover, .teaser-premium:hover {
+    border-color: var(--gris-doux);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+  }
+  .carte-plate:active, .carte-bloc:active, .plan-carte:active, .terrain-card:active, .teaser-premium:active {
+    transform: scale(0.988);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+  }
+  .teaser-premium { cursor: pointer; }
+
+  /* -------- Badges de risque (3 niveaux, pastilles translucides) -------- */
+  .badge-risque {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 8px;
+    font-size: 11.5px; font-weight: 700;
+  }
+  .badge-risque.faible { background: rgba(94,168,90,0.15); color: var(--chlorophylle); }
+  .badge-risque.modere { background: rgba(193,122,78,0.15); color: var(--argile); }
+  .badge-risque.eleve  { background: rgba(179,80,63,0.18);  color: var(--brique); }
+
+  /* -------- Anneau de croissance (diagnostic hero + certification) -------- */
+  .anneau-progression {
+    --pct: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--chlorophylle) calc(var(--pct) * 1%), var(--bordure) 0);
+    display: grid; place-items: center;
+    transition: transform 220ms var(--easing-standard);
+    flex-shrink: 0;
+  }
+  .anneau-progression::before {
+    content: '';
+    grid-area: 1 / 1;
+    width: 76%; height: 76%; border-radius: 50%;
+    background: var(--carbone);
+  }
+  .anneau-progression .anneau-contenu {
+    grid-area: 1 / 1; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .compteur-anneau { font-variant-numeric: tabular-nums; font-weight: 800; color: #fff; line-height: 1; }
+  .anneau-unite { font-size: 10px; color: var(--gris-doux); margin-top: 2px; }
+
+  .anneau-cert { width: 92px; height: 92px; }
+  .anneau-cert .compteur-anneau { font-size: 18px; }
+
+  /* -------- Résultats de diagnostic : cartes détaillées top 5 + liste compacte -------- */
+  .titre-section { font-size: 14px; font-weight: 700; margin: 0 0 4px; color: var(--os); }
+  .sous-titre-section { font-size: 12px; color: var(--gris-doux); margin: 0 0 12px; line-height: 1.5; }
+
+  .carte-culture {
+    background: var(--carbone); border: 1px solid var(--bordure); border-radius: 16px;
+    padding: 16px 18px; margin-bottom: 12px;
+    animation: glisser-apparition var(--duree-panneau) var(--easing-entree) both;
+  }
+  .carte-culture-tete { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .culture-rang { display: flex; align-items: center; gap: 10px; }
+  .culture-rang .rang-num { font-size: 11px; color: var(--gris-doux); font-weight: 700; width: 18px; }
+  .culture-nom { font-size: 15px; font-weight: 700; color: var(--os); }
+  .score-badge { font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 8px; }
+  .qual-excellent { background: rgba(94,168,90,0.18); color: var(--chlorophylle); }
+  .qual-bon { background: transparent; color: var(--chlorophylle); }
+  .qual-moyen { background: transparent; color: var(--os); }
+  .qual-faible { background: transparent; color: var(--gris-doux); }
+
+  .facteur-limitant {
+    display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--gris-doux);
+    margin-bottom: 10px; padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: 10px;
+  }
+  .facteur-limitant strong { color: var(--argile); font-weight: 700; }
+
+  .comparaison { margin-bottom: 4px; }
+  .comparaison-label { font-size: 11px; color: var(--gris-doux); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .comparaison-piste { position: relative; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin-bottom: 4px; }
+  .comparaison-plage {
+    position: absolute; top: 0; height: 100%; background: rgba(94,168,90,0.35); border-radius: 3px;
+    opacity: 0; transition: opacity 150ms var(--easing-standard);
+  }
+  .comparaison-marqueur { position: absolute; top: -3px; width: 12px; height: 12px; border-radius: 50%; background: var(--os); border: 2px solid var(--fond); }
+
+  .teaser-premium {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px;
+    padding: 10px 12px; border: 1px solid var(--chlorophylle); border-radius: 10px;
+  }
+  .teaser-premium-texte { font-size: 11px; color: var(--gris-doux); line-height: 1.4; }
+  .teaser-premium-texte strong { color: var(--chlorophylle); }
+  .teaser-premium-cta { font-size: 10.5px; font-weight: 800; color: var(--chlorophylle); white-space: nowrap; }
+
+  .carte-liste {
+    background: var(--carbone); border: 1px solid var(--bordure); border-radius: 16px; padding: 6px 18px;
+    animation: glisser-apparition var(--duree-panneau) var(--easing-entree) both;
+  }
+  .ligne-compacte { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--bordure); font-size: 13px; }
+  .ligne-compacte:last-child { border-bottom: none; }
+  .ligne-compacte .gauche { display: flex; align-items: center; gap: 10px; }
+  .ligne-compacte .rang-num { color: var(--gris-doux); }
+
+  nav.bottom-nav {
+    position: fixed; bottom: 14px; left: 14px; right: 14px;
+    display: flex; gap: 4px;
+    background: var(--carbone);
+    border: 1px solid var(--bordure);
+    border-radius: 22px;
+    padding: 7px;
+    z-index: 1000;
+  }
+  nav.bottom-nav button {
+    flex: 1; background: none; border: none; padding: 9px 4px;
+    font-size: 11px; color: rgba(255,255,255,0.45); cursor: pointer;
+    border-radius: 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    transition: background 0.2s, color 0.2s;
+  }
+  nav.bottom-nav button .icone { font-size: 18px; }
+  nav.bottom-nav button.actif { color: var(--fond); background: var(--chlorophylle); font-weight: 700; }
+
+  h2.titre-section {
+    color: #fff; font-size: 21px; margin: 2px 0 14px;
+    font-weight: 700; letter-spacing: -0.3px;
+  }
+  .carte-bloc {
+    background: var(--carbone);
+    border-radius: 20px; padding: 18px; margin-bottom: 14px;
+    border: 1px solid var(--bordure);
+  }
+  label.champ-label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--chlorophylle); text-transform: uppercase; letter-spacing: 0.4px; }
+  input[type="text"], select, textarea {
+    width: 100%; padding: 11px 13px; border: 1px solid var(--bordure); border-radius: 12px;
+    font-size: 15px; margin-bottom: 12px; font-family: inherit; background: var(--fond);
+    color: var(--os);
+  }
+  input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: var(--chlorophylle); background: var(--fond); }
+  textarea { resize: vertical; min-height: 60px; }
+  .suggestion-ville {
+    padding: 12px 14px; background: var(--carbone); border: 1px solid var(--bordure);
+    border-radius: 10px; margin-bottom: 6px; cursor: pointer; font-size: 13.5px;
+    color: var(--os); transition: border-color .15s, background .15s;
+  }
+  .suggestion-ville:active { background: var(--fond); border-color: var(--chlorophylle); }
+
+  /* -------- Type de titre foncier : référentiel à 2 niveaux -------- */
+  .repere-pays-conteneur { position: relative; transition: height var(--duree-transition-champ) var(--easing-standard); margin-bottom: 10px; }
+  .repere-pays-mode { transition: opacity var(--duree-micro) var(--easing-standard); }
+  .repere-pays {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--bordure); border-radius: 10px;
+    padding: 9px 12px; font-size: 12.5px;
+  }
+  .repere-pays .valeur { font-weight: 700; }
+  .repere-pays .modifier { color: var(--chlorophylle); font-weight: 700; font-size: 11.5px; cursor: pointer; }
+  .repere-pays.inactif { border-style: dashed; color: var(--gris-doux); }
+  .repere-pays.inactif .valeur { color: var(--gris-doux); font-weight: 600; }
+  .repere-pays-select {
+    width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--chlorophylle);
+    background: var(--fond); color: var(--os); font-family: inherit; font-size: 12.5px;
+  }
+
+  .toggle-exception { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--gris-doux); cursor: pointer; padding: 2px; }
+  .toggle-exception .case { width: 15px; height: 15px; border: 1.5px solid var(--argile); border-radius: 4px; flex-shrink: 0; transition: background .15s; }
+  .toggle-exception .case.cochee { background: var(--argile); }
+
+  .case-exception-regionale {
+    max-height: 0; opacity: 0; overflow: hidden; margin-top: 0;
+    transition: max-height var(--duree-panneau) var(--easing-entree),
+                opacity 220ms var(--easing-standard),
+                margin-top var(--duree-panneau) var(--easing-entree),
+                border-color 220ms var(--easing-standard);
+  }
+  .case-exception-regionale.visible { max-height: 80px; opacity: 1; margin-top: 10px; margin-bottom: 12px; }
+  .case-exception-regionale .toggle-exception-texte { transition: opacity var(--duree-micro) var(--easing-standard); }
+
+  .select-titre-foncier {
+    width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--bordure);
+    background: rgba(255,255,255,0.02); color: var(--os); font-family: inherit; font-size: 13px;
+    transition: opacity 200ms var(--easing-standard), border-color 200ms var(--easing-standard);
+  }
+  .select-titre-foncier:disabled { color: var(--gris-doux); }
+  @keyframes flash-maj-options {
+    0%   { border-color: var(--gris-doux); }
+    35%  { border-color: var(--chlorophylle); }
+    100% { border-color: var(--gris-doux); }
+  }
+  .select-titre-foncier.maj-options { animation: flash-maj-options 500ms var(--easing-standard); }
+
+  .aide-champ { font-size: 11px; color: var(--gris-doux); margin-top: 6px; }
+  .aide-champ.actif { color: var(--argile); }
+
+  /* -------- Infrastructure du terrain : RU approchée (reveal identique à case-exception-regionale) -------- */
+  .ru-derivee, .ru-indisponible {
+    max-height: 0; opacity: 0; overflow: hidden; margin-top: 0;
+    transition: max-height var(--duree-panneau) var(--easing-entree),
+                opacity 220ms var(--easing-standard),
+                margin-top var(--duree-panneau) var(--easing-entree);
+    display: flex; align-items: center; border-radius: 12px; padding: 12px 14px;
+  }
+  .ru-derivee { gap: 12px; background: rgba(94,168,90,0.08); border: 1px solid rgba(94,168,90,0.3); }
+  .ru-indisponible { gap: 10px; border: 1px dashed var(--bordure); color: var(--gris-doux); font-size: 12px; }
+  .ru-derivee.visible, .ru-indisponible.visible { max-height: 80px; opacity: 1; margin-top: 10px; }
+  .ru-icone { font-size: 20px; }
+  .ru-valeur { font-weight: 800; font-size: 15px; color: var(--os); }
+  .ru-sous-texte { font-size: 10.5px; color: var(--gris-doux); margin-top: 2px; }
+
+  /* -------- Paramètres avancés du rapport : lignes de statut + badges 🔧/∅ + tooltip -------- */
+  .ligne-parametre {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--bordure); gap: 10px;
+  }
+  .ligne-parametre:last-child { border-bottom: none; }
+  .parametre-nom { font-size: 12.5px; color: var(--os); }
+  .parametre-source { font-size: 10px; color: var(--gris-doux); margin-top: 1px; }
+
+  .badge-dev, .badge-nd {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700;
+    border-radius: 7px; padding: 3px 9px; white-space: nowrap; cursor: pointer; flex-shrink: 0;
+    transition: transform 100ms var(--easing-standard); border: none; background: none; font-family: inherit;
+  }
+  .badge-dev { color: var(--argile); border: 1px solid var(--argile); }
+  .badge-nd { color: var(--gris-doux); border: 1px dashed var(--bordure); }
+  .badge-dev:active, .badge-nd:active { transform: scale(0.94); }
+
+  @keyframes respiration-badge-dev {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.82; }
+  }
+  .badge-dev { animation: respiration-badge-dev 2600ms ease-in-out infinite; }
+  /* .badge-nd : volontairement aucune règle d'animation — l'immobilité signale la permanence, ne pas "corriger" */
+
+  .tooltip-parametre {
+    flex-basis: 100%; max-height: 0; opacity: 0; overflow: hidden;
+    transition: max-height 220ms var(--easing-entree), opacity 180ms var(--easing-standard), margin-top 220ms var(--easing-entree);
+    font-size: 11px; line-height: 1.5; color: var(--gris-doux);
+  }
+  .tooltip-parametre.ouvert { max-height: 100px; opacity: 1; margin-top: 8px; }
+
+  .champ-autre-precision {
+    max-height: 0; opacity: 0; overflow: hidden; margin-top: 0;
+    transition: max-height var(--duree-panneau) var(--easing-entree),
+                opacity 220ms var(--easing-standard),
+                margin-top var(--duree-panneau) var(--easing-entree);
+  }
+  .champ-autre-precision.visible { max-height: 100px; opacity: 1; margin-top: 10px; }
+  .champ-autre-precision .champ-label { color: var(--argile); }
+  button.btn {
+    background: var(--chlorophylle); color: var(--fond); border: none; border-radius: 14px;
+    padding: 13px 18px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%;
+    letter-spacing: 0.1px;
+  }
+  button.btn.secondaire { background: var(--argile); color: var(--fond); }
+  button.btn.contour { background: transparent; color: var(--chlorophylle); border: 1.5px solid var(--chlorophylle); }
+  button.btn:disabled { background: var(--bordure); color: var(--gris-doux); }
+  .disclaimer {
+    background: rgba(193,122,78,0.08); color: var(--argile); font-size: 12.5px;
+    padding: 11px 13px; border-radius: 14px; margin-bottom: 14px; line-height: 1.4;
+    border: 1px solid rgba(193,122,78,0.25);
+  }
+  .resultat-culture {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 11px 0; border-bottom: 1px solid var(--bordure);
+  }
+  .resultat-culture:last-child { border-bottom: none; }
+  .resultat-culture .nom { font-weight: 600; color: var(--os); }
+  .loader { text-align: center; padding: 22px; color: var(--gris-doux); font-size: 14px; }
+
+  #carte-leaflet { height: 340px; border-radius: 18px; margin-bottom: 12px; border: 1px solid var(--bordure); }
+  .surface-affichee {
+    text-align: center; font-size: 17px; font-weight: 700; color: var(--fond);
+    padding: 11px; background: var(--chlorophylle); border-radius: 14px; margin-bottom: 10px;
+  }
+
+  .terrain-card { position: relative; }
+  .terrain-card h3 { margin: 0 0 3px; color: #fff; font-weight: 700; font-size: 17px; }
+  .terrain-card .meta { font-size: 12.5px; color: var(--gris-doux); margin-bottom: 10px; }
+  .terrain-card .notes { font-size: 13.5px; margin-bottom: 10px; color: var(--os); }
+  .terrain-card .supprimer {
+    position: absolute; top: 16px; right: 16px; background: none; border: none;
+    color: var(--brique); font-size: 12.5px; cursor: pointer;
+  }
+
+  .cert-section { border-top: 1px solid var(--bordure); margin-top: 14px; padding-top: 14px; }
+  .cert-titre {
+    font-weight: 700; color: var(--chlorophylle); margin-bottom: 12px; font-size: 15px;
+  }
+  .cert-tabs { display: flex; gap: 16px; margin-bottom: 12px; border-bottom: 1px solid var(--bordure); }
+  .cert-tab {
+    padding: 4px 0 8px; border: none; border-bottom: 2px solid transparent; border-radius: 0;
+    background: transparent; color: var(--gris-doux); font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .cert-tab.actif { color: var(--chlorophylle); border-bottom-color: var(--chlorophylle); }
+  .cert-checklist { list-style: none; padding: 0; margin: 0; }
+  .cert-checklist li { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.06); color: var(--os); }
+  .cert-checklist li:last-child { border-bottom: none; }
+  .cert-checklist input[type="checkbox"] { margin-top: 2px; accent-color: var(--chlorophylle); flex-shrink: 0; }
+  .cert-organisme { margin-top: 9px; font-size: 11.5px; background: rgba(94,168,90,0.08); padding: 8px 10px; border-radius: 10px; color: var(--chlorophylle); }
+  .cert-organisme a { color: var(--chlorophylle); font-weight: 600; }
+
+  .vide { text-align: center; color: var(--gris-doux); padding: 32px 10px; font-size: 14px; }
+
+  .plan-carte {
+    background: var(--carbone); border: 1.5px solid var(--bordure); border-radius: 20px;
+    padding: 20px; margin-bottom: 16px; position: relative;
+  }
+  .plan-carte.premium { border-color: var(--chlorophylle); }
+  .plan-carte.max { border-color: var(--argile); }
+  .plan-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid var(--chlorophylle); color: var(--chlorophylle); background: transparent;
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 8px;
+    text-transform: uppercase; letter-spacing: .3px; margin-bottom: 8px;
+    transition: opacity var(--duree-micro) var(--easing-standard);
+  }
+  .plan-badge.badge-max { border-color: var(--argile); color: var(--argile); }
+  .plan-nom { font-weight: 700; font-size: 19px; color: #fff; margin: 0 0 2px; }
+  .plan-prix { font-size: 26px; font-weight: 800; color: #fff; margin: 6px 0 14px; }
+  .plan-prix span { font-size: 13px; font-weight: 500; color: var(--gris-doux); }
+  .plan-liste { list-style: none; padding: 0; margin: 0 0 16px; }
+  .plan-liste li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13.5px; color: var(--os); }
+  .plan-liste .coche { color: var(--chlorophylle); font-weight: 700; flex-shrink: 0; }
+  .plan-liste .verrou { color: var(--gris-doux); flex-shrink: 0; }
+  .plan-liste li.non-inclus { color: var(--gris-doux); }
+  .legende-plans {
+    text-align: center; font-size: 11.5px; color: var(--gris-doux);
+    margin: 0 0 14px; letter-spacing: .2px;
+  }
+  .plan-liste li.ligne-dev { flex-wrap: wrap; justify-content: space-between; color: var(--gris-doux); row-gap: 6px; }
+  .plan-liste li.ligne-dev > span:first-child { flex: 1 1 auto; }
+  .badge-roadmap {
+    display: inline-flex; align-items: center; background: rgba(193,122,78,0.15); color: var(--argile);
+    font-size: 10px; font-weight: 700; padding: 5px 10px; border-radius: 8px;
+    text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; flex-shrink: 0;
+    border: none; cursor: pointer; font-family: inherit; min-height: 30px;
+  }
+  .badge-roadmap:active { opacity: .7; }
+  .plan-repere-dev {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; color: var(--argile); margin: -6px 0 12px;
+  }
+
+  /* -------- FAQ accordéon -------- */
+  .faq-item { border-bottom: 1px solid var(--bordure); }
+  .faq-item:last-child { border-bottom: none; }
+  .faq-question {
+    width: 100%; min-height: 44px; background: none; border: none; font-family: inherit;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 12px 2px; font-size: 13.5px; font-weight: 600; color: var(--os);
+    text-align: left; cursor: pointer;
+  }
+  .faq-chevron { color: var(--chlorophylle); flex-shrink: 0; transition: transform .25s; font-size: 13px; }
+  .faq-item.ouvert .faq-chevron { transform: rotate(180deg); }
+  .faq-reponse { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+  .faq-reponse p { margin: 0 2px 14px; font-size: 13px; line-height: 1.55; color: var(--gris-doux); }
+  .faq-item.ouvert .faq-reponse { max-height: 400px; }
+  .faq-item.cible .faq-question { color: var(--argile); }
+
+  .badge-pro-inline {
+    display: inline-flex; align-items: center; gap: 3px; background: rgba(94,168,90,0.12);
+    color: var(--chlorophylle); font-size: 10.5px; font-weight: 700; padding: 2px 8px;
+    border-radius: 8px; text-transform: uppercase; letter-spacing: .3px; margin-left: 6px;
+  }
+  .badge-pro-inline.badge-max-inline { background: rgba(193,122,78,0.14); color: var(--argile); }
+  .fonction-verrouillee {
+    background: rgba(255,255,255,0.03); border: 1px dashed var(--bordure); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .fonction-verrouillee .fv-texte { font-size: 13px; color: var(--gris-doux); }
+  .fonction-verrouillee .fv-texte strong { color: var(--os); display: flex; align-items: center; gap: 6px; font-size: 13.5px; margin-bottom: 2px; }
+  .fonction-verrouillee button { width: auto; padding: 8px 14px; font-size: 12px; margin: 0; white-space: nowrap; }
+
+  .statut-compte { text-align: center; font-size: 12.5px; color: var(--gris-doux); margin-bottom: 14px; }
+  .statut-compte strong { color: var(--chlorophylle); }
+
+  .piliers-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .pilier-chip {
+    background: var(--carbone); border: 1px solid var(--bordure); border-radius: 12px;
+    padding: 10px; text-align: center; font-size: 10.5px; color: var(--gris-doux);
+  }
+  .pilier-chip .pilier-icone { font-size: 18px; display: block; margin-bottom: 4px; }
+  .pilier-chip strong { display: block; color: var(--os); font-size: 11.5px; margin-bottom: 2px; }
+
+  .apercu-bientot {
+    border: 1px dashed var(--argile); border-radius: 14px; padding: 16px; text-align: center;
+    background: rgba(193,122,78,0.05);
+  }
+  .apercu-bientot .apercu-icone { font-size: 30px; margin-bottom: 8px; }
+  .apercu-bientot .apercu-titre { font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px; }
+  .apercu-bientot .apercu-texte { font-size: 12px; color: var(--gris-doux); line-height: 1.4; }
+  .badge-bientot {
+    display: inline-block; background: rgba(193,122,78,0.15); color: var(--argile);
+    font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 8px; margin-top: 8px;
+    text-transform: uppercase; letter-spacing: .3px;
+  }
+
+  /* -------- Onboarding paginé -------- */
+  #onboarding-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(13,13,11,0.94);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #onboarding-overlay.hidden { display: none; }
+  .onboarding-modal {
+    background: var(--carbone); border-radius: 26px; width: 100%; max-width: 420px;
+    height: min(600px, 84vh); display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+  }
+  .onboarding-track {
+    flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .onboarding-track::-webkit-scrollbar { display: none; }
+  .onboarding-page {
+    flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 36px 30px;
+  }
+  .onboarding-illustration {
+    width: 104px; height: 104px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 46px; margin-bottom: 22px;
+    background: rgba(94,168,90,0.12);
+  }
+  .onboarding-titre {
+    font-weight: 800; letter-spacing: -0.4px;
+    font-size: 22px; color: #fff; margin: 0 0 12px;
+  }
+  .onboarding-texte { font-size: 14px; line-height: 1.55; color: var(--gris-doux); max-width: 300px; }
+  .onboarding-reponses { display: flex; flex-direction: column; gap: 9px; width: 100%; max-width: 300px; margin-top: 4px; }
+  .onboarding-reponse {
+    background: rgba(255,255,255,0.04); border: 1.5px solid var(--bordure); border-radius: 14px;
+    padding: 13px 16px; font-size: 13.5px; font-family: inherit; color: var(--os);
+    text-align: left; cursor: pointer; font-weight: 600;
+    transition: border-color .2s, background .2s;
+  }
+  .onboarding-reponse.selectionnee {
+    border-color: var(--chlorophylle); background: rgba(94,168,90,0.14); color: #fff;
+    animation: reponse-confirmee 220ms var(--easing-confirmation);
+  }
+  @keyframes reponse-confirmee {
+    0%   { transform: scale(1);     box-shadow: 0 0 0 0 rgba(94,168,90,0); }
+    45%  { transform: scale(1.035); box-shadow: 0 0 0 6px rgba(94,168,90,0.18); }
+    100% { transform: scale(1);     box-shadow: 0 0 0 0 rgba(94,168,90,0); }
+  }
+  .onboarding-footer {
+    padding: 18px 24px max(18px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--bordure); background: var(--carbone);
+  }
+  .onboarding-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 14px; }
+  .onboarding-dot { width: 7px; height: 7px; border-radius: 4px; background: var(--bordure); transition: all .25s; }
+  .onboarding-dot.actif { width: 22px; background: var(--chlorophylle); }
+  .onboarding-checkbox-row {
+    display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--gris-doux);
+    margin-bottom: 12px; justify-content: center;
+  }
+  .onboarding-checkbox-row input { accent-color: var(--chlorophylle); width: 16px; height: 16px; margin: 0; }
+</style>
+</head>
+<body>
+
+<div id="onboarding-overlay">
+  <div class="onboarding-modal">
+    <div class="onboarding-track" id="onboarding-track">
+
+      <div class="onboarding-page">
+        <div class="onboarding-illustration">🌾</div>
+        <h2 class="onboarding-titre">Où en es-tu avec tes terrains ?</h2>
+        <div class="onboarding-reponses" data-question="etat">
+          <button class="onboarding-reponse" data-valeur="neo">Je n'ai pas encore de terrain</button>
+          <button class="onboarding-reponse" data-valeur="structuration">J'ai un terrain, je veux le sécuriser</button>
+          <button class="onboarding-reponse" data-valeur="qualite">Je veux structurer une certification</button>
+          <button class="onboarding-reponse" data-valeur="multi-parcelles">Je gère déjà plusieurs parcelles</button>
+        </div>
+      </div>
+
+      <div class="onboarding-page">
+        <div class="onboarding-illustration">🎯</div>
+        <h2 class="onboarding-titre">Quel est ton objectif principal avec AgriIA ?</h2>
+        <div class="onboarding-reponses" data-question="objectif">
+          <button class="onboarding-reponse" data-valeur="neo">Cultiver ce terrain efficacement</button>
+          <button class="onboarding-reponse" data-valeur="structuration">Sécuriser mon terrain et préparer un financement</button>
+          <button class="onboarding-reponse" data-valeur="qualite">Viser une certification</button>
+          <button class="onboarding-reponse" data-valeur="multi-parcelles">Piloter plusieurs exploitations</button>
+        </div>
+      </div>
+
+      <div class="onboarding-page">
+        <div class="onboarding-illustration">🌱</div>
+        <h2 class="onboarding-titre">Bienvenue sur AgriIA</h2>
+        <p class="onboarding-texte">Un compagnon simple pour comprendre ton terrain et savoir quoi y cultiver, où que tu sois dans le monde.</p>
+      </div>
+
+
+      <div class="onboarding-page">
+        <div class="onboarding-illustration">🔍</div>
+        <h2 class="onboarding-titre">Diagnostic de terrain</h2>
+        <p class="onboarding-texte">Localise ton terrain et obtiens en quelques secondes un aperçu du climat, du sol, et des cultures les mieux adaptées.</p>
+      </div>
+
+      <div class="onboarding-page">
+        <div class="onboarding-illustration">🗺️</div>
+        <h2 class="onboarding-titre">Carte &amp; import</h2>
+        <p class="onboarding-texte">Dessine les contours de ta parcelle ou importe un fichier GeoJSON/KML pour calculer sa surface automatiquement.</p>
+      </div>
+
+      <div class="onboarding-page">
+        <div class="onboarding-illustration">📋</div>
+        <h2 class="onboarding-titre">Carnet &amp; certifications</h2>
+        <p class="onboarding-texte">Garde une trace de tes terrains et suis ta progression vers une certification Bio, HVE ou USDA Organic.</p>
+      </div>
+
+      <div class="onboarding-page">
+        <div class="onboarding-illustration">⭐</div>
+        <h2 class="onboarding-titre">Espace Premium</h2>
+        <p class="onboarding-texte">Débloque un rapport technique approfondi, un score de risques et une estimation de rentabilité, avec export PDF pour tes démarches bancaires.</p>
+      </div>
+
+    </div>
+
+    <div class="onboarding-footer">
+      <div class="onboarding-dots" id="onboarding-dots">
+        <span class="onboarding-dot actif"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+      </div>
+      <label class="onboarding-checkbox-row">
+        <input type="checkbox" id="onboarding-ne-plus-afficher">
+        Ne plus afficher au démarrage
+      </label>
+      <button class="btn" id="onboarding-btn-suivant">Suivant</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  if (localStorage.getItem('agriia_onboarding_masque') === '1') {
+    document.getElementById('onboarding-overlay').classList.add('hidden');
+  }
+</script>
+
+<div id="app">
+  <header>
+    <h1>Un terrain, mille possibles.</h1>
+    <p>Cultive juste. Fais-le reconnaître.</p>
+    <button id="btn-installer-app" style="display:none;margin-top:14px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:12px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;">
+      📲 Installer l'app
+    </button>
+  </header>
+
+  <div id="bandeau-identite" class="bandeau-identite">
+    <span class="bandeau-icone" id="bandeau-icone"></span>
+    <span class="bandeau-texte" id="bandeau-texte"></span>
+    <button class="bandeau-modifier" id="btn-modifier-objectif">Modifier</button>
+  </div>
+
+  <!-- ============ VUE DIAGNOSTIC ============ -->
+  <section id="vue-diagnostic" class="vue active">
+    <h2 class="titre-section">Diagnostic</h2>
+
+    <div class="carte-bloc">
+      <label class="champ-label">Localisation</label>
+      <button class="btn" id="btn-geoloc">📍 Utiliser ma position</button>
+      <div style="height:10px"></div>
+      <input type="text" id="champ-ville" placeholder="Ou entre une ville...">
+      <div id="suggestions-ville"></div>
+    </div>
+
+    <div class="carte-bloc" id="bloc-sol" style="display:none;">
+      <label class="champ-label">Sol (repli manuel si besoin)</label>
+      <select id="sol-ph">
+        <option value="">pH du sol (si connu)</option>
+        <option value="acide">Acide (&lt; 6)</option>
+        <option value="neutre">Neutre (6 - 7,5)</option>
+        <option value="alcalin">Alcalin (&gt; 7,5)</option>
+      </select>
+      <select id="sol-texture">
+        <option value="">Texture du sol</option>
+        <option value="sableux">Sableux</option>
+        <option value="limoneux">Limoneux</option>
+        <option value="argileux">Argileux</option>
+      </select>
+      <select id="sol-profondeur">
+        <option value="">Profondeur du sol (si connue)</option>
+        <option value="superficiel">Superficielle (&lt; 30 cm)</option>
+        <option value="moyen">Moyenne (30-60 cm)</option>
+        <option value="profond">Profonde (60-100 cm)</option>
+        <option value="tres-profond">Très profonde (&gt; 100 cm)</option>
+      </select>
+
+      <label class="champ-label" style="margin-top:4px;">🚿 Infrastructure du terrain</label>
+      <select id="sol-irrigation">
+        <option value="aucune">Irrigation : aucune</option>
+        <option value="goutte-a-goutte">Goutte-à-goutte</option>
+        <option value="aspersion">Aspersion</option>
+        <option value="pivot">Pivot</option>
+      </select>
+      <select id="sol-abris">
+        <option value="aucun">Abris : aucun</option>
+        <option value="serre-froide">Serre froide</option>
+        <option value="serre-bioclimatique">Serre bioclimatique</option>
+        <option value="tunnel">Tunnel non chauffé</option>
+        <option value="filet">Filet paragrêle / ombrage</option>
+      </select>
+
+      <div class="ru-derivee">
+        <span class="ru-icone">💧</span>
+        <div><div class="ru-valeur"></div><div class="ru-sous-texte">Dérivée de la texture et de la profondeur de sol déclarées</div></div>
+      </div>
+      <div class="ru-indisponible">— Renseigne la texture et la profondeur du sol pour voir la RU approchée</div>
+
+      <label class="champ-label">Ce terrain a-t-il déjà été cultivé ?</label>
+      <select id="hist-cultive">
+        <option value="">Sans réponse</option>
+        <option value="oui">Oui</option>
+        <option value="non">Non, jamais</option>
+      </select>
+      <label class="champ-label">Fertilité perçue</label>
+      <select id="hist-fertilite">
+        <option value="">Sans réponse</option>
+        <option value="pauvre">Plutôt pauvre</option>
+        <option value="moyen">Moyenne</option>
+        <option value="fertile">Fertile</option>
+      </select>
+      <button class="btn secondaire" id="btn-lancer-diagnostic">Lancer le diagnostic</button>
+    </div>
+
+    <div id="resultats-diagnostic"></div>
+    <div id="bloc-premium-diagnostic"></div>
+
+    <div class="carte-bloc" id="bloc-certif-question" style="display:none;">
+      <label class="champ-label">Veux-tu viser une certification pour ce terrain ?</label>
+      <select id="certif-souhaitee">
+        <option value="">Pas encore intéressé</option>
+        <option value="bio">Bio (France)</option>
+        <option value="hve">HVE (France)</option>
+        <option value="usda">USDA Organic (USA)</option>
+      </select>
+      <button class="btn" id="btn-envoyer-carnet">Envoyer ce terrain vers mon carnet →</button>
+    </div>
+  </section>
+
+  <!-- ============ VUE CARTE & IMPORT ============ -->
+  <section id="vue-carte" class="vue">
+    <h2 class="titre-section">Carte & Import de Données</h2>
+
+    <div class="carte-bloc">
+      <label class="champ-label">📁 Importer un fichier géographique</label>
+      <p style="font-size:12.5px;color:var(--gris-doux);margin-top:0;">Importe un fichier de géomètre ou extrait cadastral au format GeoJSON ou KML (ex. export Google Earth / My Maps) pour délimiter ta parcelle instantanément.</p>
+      <input type="file" id="input-file-geo" accept=".geojson,.json,.kml" style="margin-bottom:0;font-size:13px;padding:8px;">
+    </div>
+
+    <div class="carte-bloc">
+      <p style="font-size:13px;color:#777;margin-top:0;">Ou trace le contour de ta parcelle directement sur la carte avec l'outil polygone.</p>
+      <div id="carte-leaflet"></div>
+      <div class="surface-affichee" id="surface-affichee">Aucune surface sélectionnée</div>
+      <button class="btn secondaire" id="btn-surface-vers-carnet" disabled>Envoyer cette surface vers le carnet</button>
+
+      <div class="teaser-roi-carte" id="teaser-roi-carte" style="display:none;">
+        <div class="tr-titre">📈 Estime le ROI de chaque parcelle</div>
+        <div class="tr-texte">Pilote plusieurs exploitations en un coup d'œil : rendement et marge estimés par parcelle, dès que tu passes en Max.</div>
+        <button class="btn secondaire" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Passer en Max</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VUE MES TERRAINS ============ -->
+  <section id="vue-terrains" class="vue">
+    <h2 class="titre-section">Mes terrains</h2>
+    <div class="disclaimer">
+      ⚠️ Ce carnet est un registre personnel non officiel. Il n'existe pas d'API publique gratuite pour vérifier un titre foncier auprès d'une administration — ces informations ne remplacent aucune démarche officielle.
+    </div>
+
+    <div class="carte-bloc">
+      <label class="champ-label">Nom du terrain</label>
+      <input type="text" id="nt-nom" placeholder="ex. Terrain de Sinfra">
+      <label class="champ-label">Type de titre foncier</label>
+      <div id="titre-foncier-widget"></div>
+      <label class="champ-label">Numéro / référence</label>
+      <input type="text" id="nt-numero" placeholder="ex. CFR-2024-0091">
+      <label class="champ-label">Superficie déclarée (ha)</label>
+      <input type="text" id="nt-superficie" placeholder="ex. 27">
+      <label class="champ-label">Notes</label>
+      <textarea id="nt-notes" placeholder="Historique, pratiques, cultures en cours..."></textarea>
+      <button class="btn" id="btn-ajouter-terrain">Ajouter au carnet</button>
+    </div>
+
+    <div class="compteur-terrains-gestionnaire" id="compteur-terrains-gestionnaire" style="display:none;">
+      <span class="ctg-label"><strong id="ctg-valeur">0/2</strong> terrains enregistrés</span>
+      <button class="btn secondaire" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Passer en Max</button>
+    </div>
+
+    <div id="liste-terrains"></div>
+
+    <div class="carte-bloc">
+      <label class="champ-label">Avec l'Espace Premium</label>
+      <div id="liste-fonctions-verrouillees">
+        <div class="fonction-verrouillee" id="fv-rapport-technique">
+          <div class="fv-texte"><strong>📄 Rapport technique approfondi <span class="badge-pro-inline">Premium</span></strong>Analyse détaillée du climat, du sol et des cultures adaptées</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+        </div>
+        <div class="fonction-verrouillee" id="fv-score-risques">
+          <div class="fv-texte"><strong>⚠️ Score de risques environnementaux <span class="badge-pro-inline">Premium</span></strong>Sécheresse, érosion, appauvrissement du sol</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+        </div>
+        <div class="fonction-verrouillee" id="fv-rapport-pdf">
+          <div class="fv-texte"><strong>📑 Rapport PDF détaillé <span class="badge-pro-inline">Premium</span></strong>Document téléchargeable pour banque ou investisseur</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+        </div>
+        <div class="fonction-verrouillee" id="fv-ca-projete">
+          <div class="fv-texte"><strong>💰 Rendement &amp; CA projeté <span class="badge-pro-inline badge-max-inline">Max</span></strong>Estimation financière indicative par culture</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+        </div>
+        <div class="fonction-verrouillee" id="fv-ia-ndvi">
+          <div class="fv-texte"><strong>🔬 IA Botaniste &amp; 🛰️ NDVI <span class="badge-pro-inline badge-max-inline">Max</span></strong>Diagnostic maladies par photo, imagerie satellite</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VUE ABONNEMENT ============ -->
+  <section id="vue-abonnement" class="vue">
+    <h2 class="titre-section">Espace Premium</h2>
+    <div class="statut-compte" id="statut-compte">Statut actuel : <strong>Standard</strong></div>
+
+    <div class="piliers-strip">
+      <div class="pilier-chip"><span class="pilier-icone">📡</span><strong>Hors-ligne</strong>Coquille PWA installable</div>
+      <div class="pilier-chip"><span class="pilier-icone">🏦</span><strong>Passerelle bancaire</strong>PDF + carte intégrée</div>
+      <div class="pilier-chip"><span class="pilier-icone">⚠️</span><strong>Alertes prédictives</strong>Calendrier agro-météo</div>
+      <div class="pilier-chip"><span class="pilier-icone">📈</span><strong>Optimisation ROI</strong>Rendement &amp; marge</div>
+    </div>
+
+    <div class="legende-plans">🟢 Disponible dès aujourd'hui · 🟠 En développement</div>
+
+    <div class="plan-carte">
+      <div class="plan-nom">Standard</div>
+      <div class="plan-prix">0€ <span>/ toujours</span></div>
+      <ul class="plan-liste">
+        <li><span class="coche">✓</span> Diagnostic de base (climat, sol, cultures adaptées)</li>
+        <li><span class="coche">✓</span> Tracé de carte + import GeoJSON/KML</li>
+        <li><span class="coche">✓</span> Carnet de terrains — jusqu'à 2 terrains</li>
+        <li><span class="coche">✓</span> Suivi de certification (Bio, HVE, USDA)</li>
+        <li class="non-inclus"><span class="verrou">🔒</span> Calendrier agro-météo &amp; alertes</li>
+        <li class="non-inclus"><span class="verrou">🔒</span> Rapports PDF détaillés</li>
+        <li class="non-inclus"><span class="verrou">🔒</span> IA Botaniste &amp; imagerie satellite</li>
+      </ul>
+    </div>
+
+    <div class="plan-carte premium">
+      <div class="plan-badge" id="badge-recommande-premium">Recommandé</div>
+      <div class="plan-nom">Premium</div>
+      <div class="plan-prix">19€ <span>/ mois</span></div>
+      <ul class="plan-liste">
+        <li><span class="coche">✓</span> Tout le plan Standard</li>
+        <li><span class="coche">✓</span> Terrains illimités</li>
+        <li><span class="coche">✓</span> Calendrier météo à 7 jours</li>
+        <li><span class="coche">✓</span> Score de risques environnementaux détaillé</li>
+        <li><span class="coche">✓</span> Rapport technique détaillé du terrain</li>
+        <li><span class="coche">✓</span> Export PDF téléchargeable</li>
+        <li class="ligne-dev">
+          <span>Synchronisation cloud multi-appareils</span>
+          <button type="button" class="badge-roadmap" onclick="ouvrirFaqDepuisBadge('faq-stockage-local')">🟠 En développement</button>
+        </li>
+      </ul>
+      <button class="btn" id="btn-activer-premium">Passer en Premium — 19€/mois</button>
+    </div>
+
+    <div class="plan-carte max">
+      <div class="plan-badge badge-max" id="badge-etiquette-max">Expert</div>
+      <div class="plan-nom">Max</div>
+      <div class="plan-prix">39€ <span>/ mois</span></div>
+      <div class="plan-repere-dev">🛠️ 2 fonctionnalités en cours de développement</div>
+      <ul class="plan-liste">
+        <li><span class="coche">✓</span> Tout le plan Premium</li>
+        <li><span class="coche">✓</span> Estimateur de rendement &amp; chiffre d'affaires par culture</li>
+        <li class="ligne-dev">
+          <span>IA Botaniste — diagnostic de maladies par photo</span>
+          <button type="button" class="badge-roadmap" onclick="ouvrirFaqDepuisBadge('faq-ia-ndvi')">🟠 En développement</button>
+        </li>
+        <li class="ligne-dev">
+          <span>Imagerie satellite NDVI</span>
+          <button type="button" class="badge-roadmap" onclick="ouvrirFaqDepuisBadge('faq-ia-ndvi')">🟠 En développement</button>
+        </li>
+      </ul>
+      <button class="btn secondaire" id="btn-activer-max">Passer en Max — 39€/mois</button>
+    </div>
+
+    <button class="btn contour" id="btn-desactiver-premium" style="display:none;">Repasser en Standard (test)</button>
+
+    <div class="carte-bloc">
+      <h3 class="cert-titre" style="margin-bottom:12px;">Questions fréquentes</h3>
+
+      <div class="faq-item" id="faq-stockage-local">
+        <button class="faq-question" aria-expanded="false">
+          <span>Où sont stockées les données de mon carnet de terrains ?</span>
+          <span class="faq-chevron">▾</span>
+        </button>
+        <div class="faq-reponse">
+          <p>Tes terrains, notes et parcours de certification sont enregistrés directement sur ton appareil (stockage local du navigateur), pas sur un serveur. C'est rapide et ça fonctionne hors-ligne, mais les données restent propres à cet appareil et ce navigateur : elles ne se synchronisent pas encore automatiquement entre ton téléphone et ton ordinateur. La synchronisation cloud multi-appareils est en cours de développement.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-ia-ndvi">
+        <button class="faq-question" aria-expanded="false">
+          <span>Quand seront disponibles l'IA Botaniste et l'imagerie NDVI ?</span>
+          <span class="faq-chevron">▾</span>
+        </button>
+        <div class="faq-reponse">
+          <p>Ces deux fonctionnalités sont en cours de développement. Elles nécessitent de connecter des services externes — analyse d'image pour détecter les maladies, fournisseur d'imagerie satellite pour le NDVI — qui ne sont pas encore intégrés à l'app. Elles seront ajoutées au plan Max dès qu'elles seront prêtes.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-securite">
+        <button class="faq-question" aria-expanded="false">
+          <span>Mes données sont-elles sécurisées ?</span>
+          <span class="faq-chevron">▾</span>
+        </button>
+        <div class="faq-reponse">
+          <p>Comme les données restent en local sur ton appareil, elles ne transitent par aucun serveur externe et ne sont visibles par personne d'autre que toi. En contrepartie, elles peuvent être perdues si tu vides le cache du navigateur, changes d'appareil ou désinstalles l'app avant l'arrivée de la synchronisation cloud — pense à exporter tes rapports PDF importants en attendant.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-sauvegarde-pdf">
+        <button class="faq-question" aria-expanded="false">
+          <span>Dois-je faire une sauvegarde de mes rapports PDF ?</span>
+          <span class="faq-chevron">▾</span>
+        </button>
+        <div class="faq-reponse">
+          <p>Oui, c'est recommandé tant que la synchronisation cloud n'est pas disponible. Le rapport PDF (plans Premium et Max) capture un instantané complet de ton diagnostic — climat, sol, cultures recommandées, risques — que tu peux conserver de ton côté ou partager avec ta banque, indépendamment du stockage local de l'app.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      Le paiement en ligne n'est pas encore branché — ces boutons simulent l'activation pour tester l'interface. L'IA Botaniste et l'imagerie NDVI nécessitent des services externes (analyse d'image, fournisseur satellite) pas encore connectés — elles sont présentées ici en aperçu "Bientôt disponible". Les rapports (risques, rentabilité, chiffre d'affaires) restent des estimations indicatives basées sur des données publiques : à faire valider par un professionnel avant toute décision bancaire ou d'investissement.
+    </div>
+
+  </section>
+
+  <nav class="bottom-nav">
+    <button data-vue="vue-diagnostic" class="actif"><span class="icone">🔍</span>Diagnostic</button>
+    <button data-vue="vue-carte"><span class="icone">🗺️</span>Carte & Import</button>
+    <button data-vue="vue-terrains"><span class="icone">📋</span>Mes terrains</button>
+    <button data-vue="vue-abonnement"><span class="icone">⭐</span>Abonnement</button>
+  </nav>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/togeojson@0.16.0/togeojson.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+/* ============================================================
+   ABONNEMENT — Standard / Premium / Max (simulation locale)
+   ============================================================ */
+const LIMITE_TERRAINS_GRATUIT = 2;
+const ORDRE_NIVEAUX = { standard: 0, premium: 1, max: 2 };
+
+function niveauActuel() {
+  return localStorage.getItem('agriia_niveau') || 'standard';
+}
+function estPremium() { return ORDRE_NIVEAUX[niveauActuel()] >= ORDRE_NIVEAUX.premium; }
+function estMax() { return niveauActuel() === 'max'; }
+
+function majAffichageAbonnement() {
+  const statut = document.getElementById('statut-compte');
+  const btnPremium = document.getElementById('btn-activer-premium');
+  const btnMax = document.getElementById('btn-activer-max');
+  const btnDesactiver = document.getElementById('btn-desactiver-premium');
+  const niveau = niveauActuel();
+
+  const libelles = { standard: 'Standard', premium: 'Premium ⭐', max: 'Max ⭐⭐' };
+  statut.innerHTML = `Statut actuel : <strong>${libelles[niveau]}</strong>`;
+
+  btnPremium.textContent = niveau === 'standard' ? "Passer en Premium — 19€/mois" : 'Déjà inclus';
+  btnPremium.disabled = niveau !== 'standard';
+
+  btnMax.textContent = niveau === 'max' ? 'Déjà activé' : "Passer en Max — 39€/mois";
+  btnMax.disabled = niveau === 'max';
+
+  btnDesactiver.style.display = niveau !== 'standard' ? 'block' : 'none';
+
+  appliquerHabillageAbonnement(profilActif());
+}
+
+function activerNiveau(niveau) {
+  localStorage.setItem('agriia_niveau', niveau);
+  majAffichageAbonnement();
+  afficherTerrains();
+  if (dernierDiagnostic) afficherBlocPremiumDiagnostic();
+  const messages = {
+    premium: "Premium activé (simulation). Calendrier agro-météo, score de risques et rapports PDF sont débloqués.",
+    max: "Max activé (simulation). Toutes les fonctionnalités, y compris les aperçus IA Botaniste et NDVI, sont désormais visibles."
+  };
+  alert(messages[niveau]);
+}
+
+document.getElementById('btn-activer-premium').addEventListener('click', () => activerNiveau('premium'));
+document.getElementById('btn-activer-max').addEventListener('click', () => activerNiveau('max'));
+
+document.getElementById('btn-desactiver-premium').addEventListener('click', () => {
+  localStorage.setItem('agriia_niveau', 'standard');
+  majAffichageAbonnement();
+  afficherTerrains();
+  if (dernierDiagnostic) afficherBlocPremiumDiagnostic();
+});
+
+document.querySelectorAll('.bottom-nav [data-vue="vue-abonnement"]').forEach(b => {
+  b.addEventListener('click', majAffichageAbonnement);
+});
+
+/* ============================================================
+   FAQ — accordéon vanilla JS
+   ============================================================ */
+function basculerFaq(item, forcerOuvert) {
+  const bouton = item.querySelector('.faq-question');
+  const doitOuvrir = typeof forcerOuvert === 'boolean' ? forcerOuvert : !item.classList.contains('ouvert');
+  item.classList.toggle('ouvert', doitOuvrir);
+  bouton.setAttribute('aria-expanded', String(doitOuvrir));
+}
+
+document.querySelectorAll('.faq-question').forEach(bouton => {
+  bouton.addEventListener('click', () => basculerFaq(bouton.closest('.faq-item')));
+});
+
+function ouvrirFaqDepuisBadge(idFaq) {
+  const item = document.getElementById(idFaq);
+  if (!item) return;
+  document.querySelector('[data-vue="vue-abonnement"]').click();
+  basculerFaq(item, true);
+  document.querySelectorAll('.faq-item.cible').forEach(el => el.classList.remove('cible'));
+  item.classList.add('cible');
+  setTimeout(() => {
+    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 80);
+  setTimeout(() => item.classList.remove('cible'), 2200);
+}
+
+/* ============================================================
+   ONBOARDING PAGINÉ
+   ============================================================ */
+(function initOnboarding() {
+  const overlay = document.getElementById('onboarding-overlay');
+  if (overlay.classList.contains('hidden')) return;
+
+  const track = document.getElementById('onboarding-track');
+  const dots = document.querySelectorAll('.onboarding-dot');
+  const btn = document.getElementById('onboarding-btn-suivant');
+  const nbPages = dots.length;
+  let pageActuelle = 0;
+
+  function majUI() {
+    dots.forEach((d, i) => d.classList.toggle('actif', i === pageActuelle));
+    btn.textContent = pageActuelle === nbPages - 1 ? 'Commencer' : 'Suivant';
+  }
+
+  function terminerOnboarding() {
+    if (document.getElementById('onboarding-ne-plus-afficher').checked) {
+      localStorage.setItem('agriia_onboarding_masque', '1');
+    }
+    overlay.classList.add('hidden');
+    // Le profil a pu être capturé pendant cette session : on réapplique tout de suite,
+    // sans attendre un rechargement de page.
+    if (typeof appliquerProfil === 'function') appliquerProfil();
+  }
+
+  function avancerOuTerminer() {
+    if (pageActuelle < nbPages - 1) {
+      pageActuelle++;
+      track.scrollTo({ left: track.clientWidth * pageActuelle, behavior: 'smooth' });
+      majUI();
+    } else {
+      terminerOnboarding();
+    }
+  }
+
+  track.addEventListener('scroll', () => {
+    clearTimeout(track._scrollTimeout);
+    track._scrollTimeout = setTimeout(() => {
+      pageActuelle = Math.round(track.scrollLeft / track.clientWidth);
+      majUI();
+    }, 80);
+  });
+
+  btn.addEventListener('click', avancerOuTerminer);
+
+  // Écrans de capture de profil : tap sur une réponse → sélection visuelle + stockage + avance auto.
+  document.querySelectorAll('.onboarding-reponse').forEach(reponse => {
+    reponse.addEventListener('click', () => {
+      const groupe = reponse.closest('.onboarding-reponses');
+      if (groupe) groupe.querySelectorAll('.onboarding-reponse').forEach(r => r.classList.remove('selectionnee'));
+      reponse.classList.add('selectionnee');
+      localStorage.setItem('agriia_profil', reponse.dataset.valeur);
+      setTimeout(avancerOuTerminer, 220);
+    });
+  });
+})();
+
+/* ============================================================
+   NAVIGATION ENTRE ONGLETS
+   ============================================================ */
+document.querySelectorAll('.bottom-nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.vue').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.remove('actif'));
+    document.getElementById(btn.dataset.vue).classList.add('active');
+    btn.classList.add('actif');
+    if (btn.dataset.vue === 'vue-carte') setTimeout(() => carte && carte.invalidateSize(), 100);
+  });
+});
+
+/* ============================================================
+   BASE DE CULTURES (13)
+   ============================================================ */
+const CULTURES = [
+  { nom: "Manioc", ph: [4.5, 7], temp: [20, 35], pluie: [600, 2000], texture: ["sableux", "limoneux"] },
+  { nom: "Maïs", ph: [5.5, 7.5], temp: [18, 32], pluie: [500, 1500], texture: ["limoneux", "argileux"] },
+  { nom: "Riz (pluvial)", ph: [5, 7], temp: [20, 35], pluie: [1000, 2500], texture: ["argileux", "limoneux"] },
+  { nom: "Igname", ph: [5, 7], temp: [20, 33], pluie: [1000, 1800], texture: ["limoneux", "sableux"] },
+  { nom: "Moringa", ph: [5, 8.5], temp: [20, 38], pluie: [300, 1500], texture: ["sableux", "limoneux", "argileux"] },
+  { nom: "Cacao", ph: [5, 7], temp: [21, 32], pluie: [1200, 2500], texture: ["limoneux", "argileux"] },
+  { nom: "Anacarde (cajou)", ph: [4.5, 7.5], temp: [20, 35], pluie: [400, 1500], texture: ["sableux", "limoneux"] },
+  { nom: "Arachide", ph: [5.5, 7], temp: [20, 32], pluie: [500, 1200], texture: ["sableux", "limoneux"] },
+  { nom: "Banane plantain", ph: [5.5, 7.5], temp: [20, 32], pluie: [1200, 2500], texture: ["limoneux", "argileux"] },
+  { nom: "Ananas", ph: [4.5, 6.5], temp: [20, 32], pluie: [800, 1800], texture: ["sableux", "limoneux"] },
+  { nom: "Patate douce", ph: [5, 7], temp: [18, 32], pluie: [500, 1500], texture: ["sableux", "limoneux"] },
+  { nom: "Haricot", ph: [5.5, 7.5], temp: [16, 28], pluie: [400, 1200], texture: ["limoneux", "argileux"] },
+  { nom: "Tomate", ph: [5.5, 7], temp: [16, 30], pluie: [400, 1200], texture: ["limoneux", "sableux"] }
+];
+
+/* ============================================================
+   DIAGNOSTIC — localisation, climat, sol, scoring
+   ============================================================ */
+let positionActuelle = null;
+let dernierDiagnostic = null;
+
+document.getElementById('btn-geoloc').addEventListener('click', () => {
+  if (!navigator.geolocation) { alert("Géolocalisation non disponible sur cet appareil."); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    positionActuelle = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+    document.getElementById('bloc-sol').style.display = 'block';
+  }, () => alert("Impossible d'obtenir ta position. Utilise la recherche par ville."));
+});
+
+let timeoutRechercheVille;
+document.getElementById('champ-ville').addEventListener('input', (e) => {
+  clearTimeout(timeoutRechercheVille);
+  const q = e.target.value.trim();
+  const zoneSuggestions = document.getElementById('suggestions-ville');
+  if (q.length < 2) { zoneSuggestions.innerHTML = ''; return; }
+  timeoutRechercheVille = setTimeout(async () => {
+    try {
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=fr`);
+      const data = await res.json();
+      zoneSuggestions.innerHTML = '';
+      (data.results || []).forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'suggestion-ville';
+        div.textContent = `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`;
+        div.addEventListener('click', () => {
+          positionActuelle = { lat: r.latitude, lon: r.longitude, pays: r.country || null };
+          document.getElementById('champ-ville').value = div.textContent;
+          zoneSuggestions.innerHTML = '';
+          document.getElementById('bloc-sol').style.display = 'block';
+          if (typeof initialiserTitreFoncier === 'function') initialiserTitreFoncier();
+        });
+        zoneSuggestions.appendChild(div);
+      });
+    } catch (e) { /* silencieux */ }
+  }, 400);
+});
+
+document.getElementById('btn-lancer-diagnostic').addEventListener('click', lancerDiagnostic);
+
+async function lancerDiagnostic() {
+  if (!positionActuelle) { alert("Choisis d'abord ta position."); return; }
+  const zoneResultats = document.getElementById('resultats-diagnostic');
+  zoneResultats.innerHTML = '<div class="loader">Analyse du climat et du sol en cours...</div>';
+
+  let climat = null;
+  let sol = null;
+
+  try {
+    const fin = new Date();
+    const debut = new Date();
+    debut.setFullYear(fin.getFullYear() - 1);
+    const fmt = d => d.toISOString().split('T')[0];
+    const res = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${positionActuelle.lat}&longitude=${positionActuelle.lon}&start_date=${fmt(debut)}&end_date=${fmt(fin)}&daily=temperature_2m_mean,precipitation_sum&timezone=auto`);
+    const data = await res.json();
+    const temps = data.daily.temperature_2m_mean.filter(v => v !== null);
+    const pluies = data.daily.precipitation_sum.filter(v => v !== null);
+    const tempMoy = temps.reduce((a, b) => a + b, 0) / temps.length;
+    const pluieTotale = pluies.reduce((a, b) => a + b, 0);
+    climat = { tempMoy, pluieTotale };
+  } catch (e) { /* repli */ }
+
+  try {
+    const res = await fetch(`https://rest.isric.org/soilgrids/v2.0/properties/query?lon=${positionActuelle.lon}&lat=${positionActuelle.lat}&property=phh2o&property=clay&property=sand&depth=0-5cm&value=mean`);
+    const data = await res.json();
+    const couches = data.properties.layers;
+    const phLayer = couches.find(l => l.name === 'phh2o');
+    const clayLayer = couches.find(l => l.name === 'clay');
+    const sandLayer = couches.find(l => l.name === 'sand');
+    const phVal = phLayer.depths[0].values.mean / 10;
+    const clayVal = clayLayer.depths[0].values.mean;
+    const sandVal = sandLayer.depths[0].values.mean;
+    let texture = 'limoneux';
+    if (sandVal > 450) texture = 'sableux';
+    else if (clayVal > 350) texture = 'argileux';
+    sol = { ph: phVal, texture };
+  } catch (e) { /* repli */ }
+
+  const phManuel = document.getElementById('sol-ph').value;
+  const textureManuelle = document.getElementById('sol-texture').value;
+  if (!sol || phManuel || textureManuelle) {
+    sol = sol || {};
+    if (phManuel === 'acide') sol.ph = 5.5;
+    else if (phManuel === 'neutre') sol.ph = 6.8;
+    else if (phManuel === 'alcalin') sol.ph = 8;
+    if (textureManuelle) sol.texture = textureManuelle;
+  }
+
+  if (!climat || !sol || sol.ph === undefined || !sol.texture) {
+    zoneResultats.innerHTML = '<div class="disclaimer">Impossible de récupérer toutes les données automatiquement. Renseigne le pH et la texture manuellement ci-dessus puis relance le diagnostic.</div>';
+    return;
+  }
+
+  const histFertilite = document.getElementById('hist-fertilite').value;
+  const histCultive = document.getElementById('hist-cultive').value;
+  const resultats = calculerScores(climat, sol, histFertilite);
+
+  dernierDiagnostic = { climat, sol, resultats, histFertilite, histCultive, position: { ...positionActuelle } };
+
+  afficherResultats(resultats);
+  afficherBlocPremiumDiagnostic();
+  document.getElementById('bloc-certif-question').style.display = 'block';
+  initialiserTitreFoncier();
+}
+
+const LABELS_TEXTURE = { sableux: 'Sableux', limoneux: 'Limoneux', argileux: 'Argileux' };
+const POSITION_TEXTURE = { sableux: 15, limoneux: 50, argileux: 85 };
+
+function calculerFacteurLimitant(climat, sol, c) {
+  const facteurs = [];
+
+  if (climat.tempMoy < c.temp[0] || climat.tempMoy > c.temp[1]) {
+    const ecart = climat.tempMoy < c.temp[0] ? c.temp[0] - climat.tempMoy : climat.tempMoy - c.temp[1];
+    facteurs.push({
+      cle: 'temp', libelle: 'Température', penalite: ecart * 4,
+      idealTexte: `${c.temp[0]}–${c.temp[1]}°C`, mesureTexte: `${climat.tempMoy.toFixed(1)}°C`,
+      min: c.temp[0], max: c.temp[1], valeur: climat.tempMoy, planchZero: false
+    });
+  }
+  if (climat.pluieTotale < c.pluie[0] || climat.pluieTotale > c.pluie[1]) {
+    const ecart = climat.pluieTotale < c.pluie[0] ? (c.pluie[0] - climat.pluieTotale) / 15 : (climat.pluieTotale - c.pluie[1]) / 25;
+    facteurs.push({
+      cle: 'pluie', libelle: 'Pluviométrie', penalite: ecart,
+      idealTexte: `${c.pluie[0]}–${c.pluie[1]}mm`, mesureTexte: `${Math.round(climat.pluieTotale)}mm`,
+      min: c.pluie[0], max: c.pluie[1], valeur: climat.pluieTotale, planchZero: true
+    });
+  }
+  if (sol.ph < c.ph[0] || sol.ph > c.ph[1]) {
+    const ecart = sol.ph < c.ph[0] ? (c.ph[0] - sol.ph) * 15 : (sol.ph - c.ph[1]) * 15;
+    facteurs.push({
+      cle: 'ph', libelle: 'pH du sol', penalite: ecart,
+      idealTexte: `${c.ph[0]}–${c.ph[1]}`, mesureTexte: sol.ph.toFixed(1),
+      min: c.ph[0], max: c.ph[1], valeur: sol.ph, planchZero: false
+    });
+  }
+  if (!c.texture.includes(sol.texture)) {
+    const positions = c.texture.map(t => POSITION_TEXTURE[t]);
+    facteurs.push({
+      cle: 'texture', libelle: 'Texture du sol', penalite: 15, categoriel: true,
+      idealTexte: c.texture.map(t => LABELS_TEXTURE[t]).join('/'), mesureTexte: LABELS_TEXTURE[sol.texture],
+      positionsIdeales: positions, positionMesuree: POSITION_TEXTURE[sol.texture]
+    });
+  }
+
+  if (!facteurs.length) return null;
+  facteurs.sort((a, b) => b.penalite - a.penalite);
+  return facteurs[0];
+}
+
+function positionComparaison(f) {
+  if (f.categoriel) {
+    const debut = Math.min(...f.positionsIdeales);
+    const fin = Math.max(...f.positionsIdeales);
+    return { plageDebut: Math.max(0, debut - 8), plageLargeur: Math.min(100, (fin - debut) + 16), marqueur: f.positionMesuree };
+  }
+  const marge = (f.max - f.min) * 0.35;
+  let echelleMin = f.min - marge;
+  const echelleMax = f.max + marge;
+  if (f.planchZero) echelleMin = Math.max(0, echelleMin);
+  const largeur = echelleMax - echelleMin;
+  const pct = v => Math.max(2, Math.min(98, ((v - echelleMin) / largeur) * 100));
+  return { plageDebut: pct(f.min), plageLargeur: pct(f.max) - pct(f.min), marqueur: pct(f.valeur) };
+}
+
+/* ============================================================
+   INFRASTRUCTURE DU TERRAIN — Réserve Utile (RU) approchée
+   ============================================================
+   AWC = capacité de rétention en eau utile, ordre de grandeur agronomique standard
+   (mm par cm de profondeur) ; RU = AWC(texture) × profondeur représentative (cm).
+   Approximation volontaire (d'où "RU approchée") — à affiner si Data/Agronomie
+   fournit des valeurs de référence plus précises. */
+const AWC_TEXTURE = { sableux: 0.6, limoneux: 1.5, argileux: 1.3 };
+const PROFONDEUR_CM = { superficiel: 20, moyen: 45, profond: 80, 'tres-profond': 120 };
+
+function calculerRU(texture, profondeur) {
+  if (!AWC_TEXTURE[texture] || !PROFONDEUR_CM[profondeur]) return null;
+  return Math.round(AWC_TEXTURE[texture] * PROFONDEUR_CM[profondeur]);
+}
+
+// Point 1 du motion : reveal identique à .case-exception-regionale / .champ-autre-precision
+function majAffichageRU(ruConnue) {
+  document.querySelector('.ru-indisponible').classList.toggle('visible', !ruConnue);
+  document.querySelector('.ru-derivee').classList.toggle('visible', ruConnue);
+}
+
+function majRU() {
+  const texture = document.getElementById('sol-texture').value;
+  const profondeur = document.getElementById('sol-profondeur').value;
+  const ru = calculerRU(texture, profondeur);
+  majAffichageRU(ru !== null);
+  if (ru !== null) {
+    document.querySelector('.ru-valeur').textContent = `RU approchée : ${ru}mm`;
+  }
+}
+
+document.getElementById('sol-texture').addEventListener('change', majRU);
+document.getElementById('sol-profondeur').addEventListener('change', majRU);
+
+function calculerScores(climat, sol, fertilite) {
+  return CULTURES.map(c => {
+    let score = 100;
+    if (sol.ph < c.ph[0]) score -= (c.ph[0] - sol.ph) * 15;
+    else if (sol.ph > c.ph[1]) score -= (sol.ph - c.ph[1]) * 15;
+    if (climat.tempMoy < c.temp[0]) score -= (c.temp[0] - climat.tempMoy) * 4;
+    else if (climat.tempMoy > c.temp[1]) score -= (climat.tempMoy - c.temp[1]) * 4;
+    if (climat.pluieTotale < c.pluie[0]) score -= (c.pluie[0] - climat.pluieTotale) / 15;
+    else if (climat.pluieTotale > c.pluie[1]) score -= (climat.pluieTotale - c.pluie[1]) / 25;
+    if (!c.texture.includes(sol.texture)) score -= 15;
+    if (fertilite === 'pauvre') score -= 8;
+    if (fertilite === 'fertile') score += 5;
+
+    score = Math.max(0, Math.min(100, Math.round(score)));
+    return { nom: c.nom, score, facteurLimitant: calculerFacteurLimitant(climat, sol, c) };
+  }).sort((a, b) => b.score - a.score);
+}
+
+/* ============================================================
+   ANNEAU DE CROISSANCE — remplissage + compteur synchronisés
+   ============================================================ */
+const easeCroissance = t => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+const easeMiseAJour = t => t * (2 - t);
+
+function animerAnneau(elAnneau, elCompteur, depart, cible, dureeMs, easing, formatter) {
+  if (!elAnneau) return;
+  const format = formatter || (v => Math.round(v) + '%');
+  const t0 = performance.now();
+  function frame(now) {
+    const t = Math.min(1, (now - t0) / dureeMs);
+    const val = depart + (cible - depart) * easing(t);
+    elAnneau.style.setProperty('--pct', val);
+    if (elCompteur) elCompteur.textContent = format(val);
+    if (t < 1) requestAnimationFrame(frame);
+    else {
+      elAnneau.style.transform = 'scale(1.015)';
+      setTimeout(() => { elAnneau.style.transform = 'scale(1)'; }, 120);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function classeQualite(score) {
+  if (score >= 80) return { classe: 'excellent', libelle: 'Excellent' };
+  if (score >= 60) return { classe: 'bon', libelle: 'Bon' };
+  if (score >= 40) return { classe: 'moyen', libelle: 'Moyen' };
+  return { classe: 'faible', libelle: 'Faible' };
+}
+
+function animerMarqueurComparaison(elMarqueur, depart, cible, dureeMs = 550) {
+  if (!elMarqueur) return;
+  const t0 = performance.now();
+  function frame(now) {
+    const t = Math.min(1, (now - t0) / dureeMs);
+    const val = depart + (cible - depart) * easeCroissance(t);
+    elMarqueur.style.left = val + '%';
+    if (t < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+function afficherResultats(resultats) {
+  const zone = document.getElementById('resultats-diagnostic');
+  if (!resultats.length) { zone.innerHTML = ''; return; }
+
+  const top5 = resultats.slice(0, 5);
+  const reste = resultats.slice(5, 10);
+  const premium = estPremium();
+
+  let html = `
+    <div class="titre-section">🌱 Cultures les plus adaptées</div>
+    <p class="sous-titre-section">Détail sur le facteur le plus déterminant pour chaque culture — le rapport complet (4 paramètres + risques) reste Premium.</p>`;
+
+  top5.forEach((r, i) => {
+    const q = classeQualite(r.score);
+    const f = r.facteurLimitant;
+    let comparaisonHtml = '';
+    if (f) {
+      const pos = positionComparaison(f);
+      comparaisonHtml = `
+        <div class="facteur-limitant">⚠️ Facteur le plus limitant : <strong>${f.libelle}</strong></div>
+        <div class="comparaison">
+          <div class="comparaison-label"><span>${f.categoriel ? 'Idéal' : 'Plage idéale'} : ${f.idealTexte}</span><span>Mesuré : ${f.mesureTexte}</span></div>
+          <div class="comparaison-piste">
+            <div class="comparaison-plage" style="left:${pos.plageDebut}%;width:${pos.plageLargeur}%;"></div>
+            <div class="comparaison-marqueur" data-cible="${pos.marqueur}" style="left:50%;"></div>
+          </div>
+        </div>`;
+    }
+    const teaserHtml = premium ? '' : `
+        <div class="teaser-premium" onclick="document.querySelector('[data-vue=\\'vue-abonnement\\']').click()">
+          <div class="teaser-premium-texte"><strong>Rapport complet</strong> · 4 paramètres comparés + score de risques détaillé</div>
+          <span class="teaser-premium-cta">🔒 Premium</span>
+        </div>`;
+    html += `
+      <div class="carte-culture">
+        <div class="carte-culture-tete">
+          <div class="culture-rang"><span class="rang-num">${i + 1}</span><span class="culture-nom">${r.nom}</span></div>
+          <span class="score-badge qual-${q.classe}">${r.score}% · ${q.libelle}</span>
+        </div>
+        ${comparaisonHtml}${teaserHtml}
+      </div>`;
+  });
+
+  if (reste.length) {
+    html += `
+      <div class="titre-section" style="margin-top:22px;">Cultures suivantes</div>
+      <p class="sous-titre-section">Score et badge seuls — pas de détail, y compris pour les scores faibles (jamais masqués).</p>
+      <div class="carte-liste">
+        ${reste.map((r, i) => {
+          const q = classeQualite(r.score);
+          return `<div class="ligne-compacte"><div class="gauche"><span class="rang-num">${i + 6}</span><span>${r.nom}</span></div><span class="qual-${q.classe}" style="font-weight:700;">${r.score}%</span></div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  zone.innerHTML = html;
+
+  const cartes = zone.querySelectorAll('.carte-culture');
+  cartes.forEach((carte, i) => {
+    carte.style.animationDelay = `${i * 70}ms`;
+    carte.addEventListener('animationend', () => {
+      const marqueur = carte.querySelector('.comparaison-marqueur');
+      const plage = carte.querySelector('.comparaison-plage');
+      if (marqueur) animerMarqueurComparaison(marqueur, 50, parseFloat(marqueur.dataset.cible));
+      if (plage) plage.style.opacity = 1;
+    }, { once: true });
+  });
+  const listeCompacte = zone.querySelector('.carte-liste');
+  if (listeCompacte) listeCompacte.style.animationDelay = `${cartes.length * 70 + 100}ms`;
+}
+
+/* ============================================================
+   MODULE PREMIUM — risques, rentabilité, rapport PDF
+   ============================================================ */
+
+// Rendements et prix indicatifs génériques (ordre de grandeur, PAS des données de marché locales réelles)
+const REFERENCE_RENTABILITE = {
+  "Manioc": { rendement: [8, 20], prix: [80, 150] },
+  "Maïs": { rendement: [1.5, 4], prix: [150, 250] },
+  "Riz (pluvial)": { rendement: [1.5, 3], prix: [250, 400] },
+  "Igname": { rendement: [8, 15], prix: [150, 300] },
+  "Moringa": { rendement: [2, 5], prix: [800, 2000] },
+  "Cacao": { rendement: [0.4, 0.8], prix: [1500, 2800] },
+  "Anacarde (cajou)": { rendement: [0.4, 1], prix: [700, 1200] },
+  "Arachide": { rendement: [0.8, 1.5], prix: [300, 500] },
+  "Banane plantain": { rendement: [8, 15], prix: [150, 300] },
+  "Ananas": { rendement: [20, 40], prix: [100, 200] },
+  "Patate douce": { rendement: [6, 15], prix: [100, 200] },
+  "Haricot": { rendement: [0.6, 1.2], prix: [300, 600] },
+  "Tomate": { rendement: [15, 35], prix: [150, 350] }
+};
+
+function calculerRisques(climat, sol, fertilite, cultive) {
+  let secheresse = 'Faible';
+  if (climat.pluieTotale < 700) secheresse = 'Élevé';
+  else if (climat.pluieTotale < 1200) secheresse = 'Modéré';
+
+  let erosion = 'Faible';
+  if (sol.texture === 'sableux' && climat.pluieTotale > 1500) erosion = 'Élevé';
+  else if (sol.texture === 'sableux' || (sol.texture === 'argileux' && climat.pluieTotale > 1500)) erosion = 'Modéré';
+
+  let appauvrissement = 'Modéré';
+  if (fertilite === 'pauvre') appauvrissement = 'Élevé';
+  else if (fertilite === 'fertile') appauvrissement = 'Faible';
+  if (cultive === 'oui' && appauvrissement === 'Faible') appauvrissement = 'Modéré';
+
+  const niveaux = { 'Faible': 1, 'Modéré': 2, 'Élevé': 3 };
+  const pire = Math.max(niveaux[secheresse], niveaux[erosion], niveaux[appauvrissement]);
+  const global = Object.keys(niveaux).find(k => niveaux[k] === pire);
+
+  return { secheresse, erosion, appauvrissement, global };
+}
+
+function calculerRentabilite(resultats) {
+  return resultats.slice(0, 3).map(r => {
+    const ref = REFERENCE_RENTABILITE[r.nom];
+    if (!ref) return { nom: r.nom, indicatif: null };
+    const revenuMin = Math.round(ref.rendement[0] * ref.prix[0]);
+    const revenuMax = Math.round(ref.rendement[1] * ref.prix[1]);
+    const item = {
+      nom: r.nom,
+      rendement: `${ref.rendement[0]} - ${ref.rendement[1]} t/ha`,
+      revenu: `${revenuMin.toLocaleString('fr-FR')} - ${revenuMax.toLocaleString('fr-FR')} €/ha/an`
+    };
+    if (surfaceCourante > 0) {
+      item.caMin = Math.round(revenuMin * surfaceCourante).toLocaleString('fr-FR');
+      item.caMax = Math.round(revenuMax * surfaceCourante).toLocaleString('fr-FR');
+    }
+    return item;
+  });
+}
+
+function classeRisque(niveau) {
+  if (niveau === 'Faible') return 'faible';
+  if (niveau === 'Modéré') return 'modere';
+  return 'eleve';
+}
+
+/* ============================================================
+   PARAMÈTRES AVANCÉS DU RAPPORT — climat avancé / conformité / marché (Max)
+   ============================================================
+   Toutes les lignes sont non opérationnelles à ce stade (statut informatif) :
+   🔧 en développement = deviendra disponible ; ∅ non disponible = limitation
+   structurelle de source, restera vraie même une fois développée.
+   Estimation Lead Dev (à valider par Data/Agronomie) : cultures plausiblement
+   couvertes par la source RNM (~30 filières fruits/légumes) parmi celles de
+   l'app — les céréales et cultures d'exportation tropicales n'y figurent pas. */
+const CULTURES_RNM_COUVERTES = new Set(['Tomate', 'Haricot']);
+
+function ligneParametre(nom, source, statut, tooltip) {
+  const badge = statut === 'nd'
+    ? `<button type="button" class="badge-nd">∅ Non disponible pour cette culture</button>`
+    : `<button type="button" class="badge-dev">🔧 En développement</button>`;
+  return `
+    <div class="ligne-parametre">
+      <div><div class="parametre-nom">${nom}</div>${source ? `<div class="parametre-source">${source}</div>` : ''}</div>
+      ${badge}
+      <div class="tooltip-parametre">${tooltip}</div>
+    </div>`;
+}
+
+function construireParametresAvances(topCultureNom) {
+  const tendanceCouverte = topCultureNom && CULTURES_RNM_COUVERTES.has(topCultureNom);
+  return `
+    <div id="rapport-parametres-avances">
+      <div class="titre-section" style="margin-top:22px;">📊 Paramètres climatiques avancés</div>
+      <p class="sous-titre-section">Dépend d'une source externe non encore intégrée.</p>
+      <div class="carte">
+        ${ligneParametre('Somme des degrés-jours', null, 'dev', "Nécessite un historique météo journalier sur plusieurs mois, pas encore connecté à une source de données climatiques.")}
+        ${ligneParametre('ETP (évapotranspiration)', null, 'dev', "Calcul basé sur des données météo horaires (vent, humidité, rayonnement) non encore intégrées.")}
+        ${ligneParametre('Historique de gel tardif', null, 'dev', "Nécessite un historique météo pluriannuel par zone, pas encore connecté.")}
+      </div>
+
+      <div class="titre-section" style="margin-top:22px;">⚖️ Conformité réglementaire</div>
+      <div class="carte">
+        ${ligneParametre('Statut ZVN', null, 'dev', "Nécessite la connexion au zonage officiel des Zones Vulnérables aux Nitrates, pas encore intégrée.")}
+        ${ligneParametre("Restrictions d'eau (VigiEau)", null, 'dev', "Nécessite une connexion à la plateforme VigiEau (arrêtés sécheresse), pas encore développée.")}
+        ${ligneParametre('Règles PAC / BCAE', null, 'dev', "Nécessite le référentiel des Bonnes Conditions Agricoles et Environnementales par zone, pas encore intégré.")}
+      </div>
+
+      <div class="titre-section" style="margin-top:22px;">📈 Analyse de marché régionale <span class="badge-pro-inline badge-max-inline">Max</span></div>
+      <p class="sous-titre-section">La "tendance de campagne" a une limite structurelle de source (~30 filières fruits/légumes) — distincte d'un simple "pas encore développé".</p>
+      <div class="carte">
+        ${ligneParametre('Production régionale', 'Source Agreste · mise à jour annuelle', 'dev', "Nécessite la connexion aux statistiques Agreste par région, pas encore développée.")}
+        ${ligneParametre('Prix de marché', 'Source RNM / FranceAgriMer · quotidien à hebdo', 'dev', "Nécessite une connexion aux cotations RNM/FranceAgriMer en temps réel, pas encore développée.")}
+        ${topCultureNom ? ligneParametre(
+          `Tendance de campagne — ${topCultureNom}`,
+          'Source RNM · limité à ~30 filières fruits/légumes',
+          tendanceCouverte ? 'dev' : 'nd',
+          tendanceCouverte
+            ? "Nécessite la connexion aux séries RNM pour cette filière, pas encore développée."
+            : "Source RNM limitée à environ 30 filières fruits et légumes frais — ne couvre pas cette culture, même une fois la fonctionnalité développée."
+        ) : ''}
+      </div>
+    </div>`;
+}
+
+function afficherBlocPremiumDiagnostic() {
+  const zone = document.getElementById('bloc-premium-diagnostic');
+  if (!dernierDiagnostic) { zone.innerHTML = ''; return; }
+  const profil = profilActif();
+
+  if (!estPremium()) {
+    // Profil "famille" : le terrain financier (risques + PDF banque) est mis en avant avec un CTA direct.
+    if (profil === 'famille') {
+      zone.innerHTML = `
+        <div class="carte-bloc">
+          <label class="champ-label">Espace Premium</label>
+          <div class="fonction-verrouillee">
+            <div class="fv-texte"><strong>⚠️ Score de risques + 📑 Rapport PDF <span class="badge-pro-inline">Premium</span></strong>Le document utile pour préparer un dossier de financement</div>
+            <button class="btn contour" onclick="document.querySelector('[data-vue=\\'vue-abonnement\\']').click()">Débloquer Premium</button>
+          </div>
+          <div class="fonction-verrouillee">
+            <div class="fv-texte"><strong>🔬 IA Botaniste + 🛰️ NDVI + 💰 Projection CA <span class="badge-pro-inline badge-max-inline">Max</span></strong>Diagnostic maladies, imagerie satellite, rendement financier</div>
+            <button class="btn contour" onclick="document.querySelector('[data-vue=\\'vue-abonnement\\']').click()">Débloquer</button>
+          </div>
+        </div>`;
+      return;
+    }
+    zone.innerHTML = `
+      <div class="carte-bloc">
+        <label class="champ-label">Espace Premium</label>
+        <div class="fonction-verrouillee">
+          <div class="fv-texte"><strong>📄 Rapport technique + ⚠️ Risques <span class="badge-pro-inline">Premium</span></strong>Débloque l'analyse complète de ce terrain</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\\'vue-abonnement\\']').click()">Débloquer</button>
+        </div>
+        <div class="fonction-verrouillee">
+          <div class="fv-texte"><strong>🔬 IA Botaniste + 🛰️ NDVI + 💰 Projection CA <span class="badge-pro-inline badge-max-inline">Max</span></strong>Diagnostic maladies, imagerie satellite, rendement financier</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\\'vue-abonnement\\']').click()">Débloquer</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const { climat, sol, resultats, histFertilite, histCultive } = dernierDiagnostic;
+  const risques = calculerRisques(climat, sol, histFertilite, histCultive);
+
+  const blocRapportTechnique = `
+    <div class="carte-bloc">
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">📄 Rapport technique</h3>
+      <p style="font-size:13.5px;line-height:1.5;color:var(--os);">
+        Ce terrain présente un climat moyen de ${climat.tempMoy.toFixed(1)}°C avec ${Math.round(climat.pluieTotale)}mm de précipitations annuelles.
+        Le sol est de texture ${sol.texture}, avec un pH mesuré à ${sol.ph.toFixed(1)}.
+        ${resultats.length ? `La culture la mieux adaptée identifiée est <strong>${resultats[0].nom}</strong> (${resultats[0].score}% de compatibilité).` : ''}
+      </p>
+    </div>`;
+
+  const blocRisques = `
+    <div class="carte-bloc">
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">⚠️ Score de risques environnementaux</h3>
+      <div class="resultat-culture"><span class="nom">Sécheresse</span><span class="badge-risque ${classeRisque(risques.secheresse)}">${risques.secheresse}</span></div>
+      <div class="resultat-culture"><span class="nom">Érosion</span><span class="badge-risque ${classeRisque(risques.erosion)}">${risques.erosion}</span></div>
+      <div class="resultat-culture"><span class="nom">Appauvrissement du sol</span><span class="badge-risque ${classeRisque(risques.appauvrissement)}">${risques.appauvrissement}</span></div>
+      <div class="resultat-culture"><span class="nom" style="font-weight:700;">Risque global</span><span class="badge-risque ${classeRisque(risques.global)}">${risques.global}</span></div>
+    </div>`;
+
+  const blocCalendrier = `
+    <div class="carte-bloc">
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">🌦️ Calendrier agro-météorologique (7 jours)</h3>
+      <div id="calendrier-meteo"><div class="loader">Chargement des prévisions...</div></div>
+    </div>`;
+
+  const blocPdf = `
+    <div class="carte-bloc">
+      <button class="btn" id="btn-generer-pdf">📑 Télécharger le rapport PDF détaillé</button>
+      <div id="statut-pdf" class="status" style="font-size:.8rem;color:var(--gris-doux);margin-top:6px;text-align:center;"></div>
+    </div>
+  `;
+
+  let blocsMax = '';
+  if (estMax()) {
+    const rentabilite = calculerRentabilite(resultats);
+    blocsMax = `
+    <div class="carte-bloc">
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">💰 Estimateur de rendement &amp; projection de chiffre d'affaires</h3>
+      ${rentabilite.map(r => r.rendement ? `
+        <div style="padding:9px 0;border-bottom:1px solid var(--bordure);">
+          <div style="font-weight:600;font-size:13.5px;color:var(--os);">${r.nom}</div>
+          <div style="font-size:12px;color:var(--gris-doux);">Rendement indicatif : ${r.rendement} · Revenu brut indicatif : ${r.revenu}${surfaceCourante > 0 ? ` · CA projeté sur ${surfaceCourante.toFixed(2)} ha : ${r.caMin} - ${r.caMax} €/an` : ''}</div>
+        </div>` : ''
+      ).join('')}
+      ${surfaceCourante === 0 ? '<div style="font-size:11.5px;color:var(--gris-doux);margin-top:8px;">Renseigne une surface via l’onglet Carte pour une projection de CA total.</div>' : ''}
+      <div class="disclaimer" style="margin-top:10px;">Estimations génériques indicatives, non liées à un marché local en temps réel. À faire valider par un professionnel avant toute décision financière.</div>
+    </div>
+
+    <div class="carte-bloc">
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">🔬 IA Botaniste</h3>
+      <div class="apercu-bientot">
+        <div class="apercu-icone">🔬</div>
+        <div class="apercu-titre">Diagnostic de maladies par photo</div>
+        <div class="apercu-texte">Prends en photo une feuille ou un plant pour détecter d'éventuels signes de maladie ou de carence.</div>
+        <div class="badge-bientot">Bientôt disponible</div>
+      </div>
+    </div>
+
+    <div class="carte-bloc">
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">🛰️ Imagerie NDVI satellite</h3>
+      <div class="apercu-bientot">
+        <div class="apercu-icone">🛰️</div>
+        <div class="apercu-titre">Indice de végétation par satellite</div>
+        <div class="apercu-texte">Visualise la vigueur de la végétation de ta parcelle grâce à l'imagerie satellite, mise à jour régulièrement.</div>
+        <div class="badge-bientot">Bientôt disponible</div>
+      </div>
+    </div>`;
+  } else {
+    blocsMax = `
+    <div class="carte-bloc">
+      <div class="fonction-verrouillee">
+        <div class="fv-texte"><strong>🔬 IA Botaniste + 🛰️ NDVI + 💰 Projection CA <span class="badge-pro-inline badge-max-inline">Max</span></strong>Diagnostic maladies, imagerie satellite, rendement financier</div>
+        <button class="btn contour" onclick="document.querySelector('[data-vue=\\'vue-abonnement\\']').click()">Débloquer</button>
+      </div>
+    </div>`;
+  }
+
+  // Profil "famille" : Score de risques + PDF remontés juste sous les résultats, avant le rapport technique.
+  const blocParametresAvances = construireParametresAvances(resultats[0] && resultats[0].nom);
+  const html = profil === 'famille'
+    ? blocRisques + blocPdf + blocRapportTechnique + blocCalendrier + blocsMax + blocParametresAvances
+    : blocRapportTechnique + blocRisques + blocCalendrier + blocsMax + blocPdf + blocParametresAvances;
+
+  zone.innerHTML = html;
+  document.getElementById('btn-generer-pdf').addEventListener('click', () => genererRapportPDF());
+  chargerCalendrierMeteo(dernierDiagnostic.position.lat, dernierDiagnostic.position.lon);
+
+  // Point 2 du motion : entrée séquencée des 3 blocs de paramètres avancés (130ms entre blocs)
+  zone.querySelectorAll('#rapport-parametres-avances .carte').forEach((bloc, i) => {
+    bloc.style.animation = 'glisser-apparition var(--duree-panneau) var(--easing-entree) both';
+    bloc.style.animationDelay = `${i * 130}ms`;
+  });
+
+  // Point 3 du motion : tap badge 🔧/∅ → tooltip inline. Repli JS (pas de :has()) pour la pause de respiration.
+  zone.querySelectorAll('.badge-dev, .badge-nd').forEach(badge => {
+    badge.addEventListener('click', () => {
+      const tooltip = badge.closest('.ligne-parametre')?.querySelector('.tooltip-parametre');
+      if (!tooltip) return;
+      const ouvrir = !tooltip.classList.contains('ouvert');
+      tooltip.classList.toggle('ouvert', ouvrir);
+      if (badge.classList.contains('badge-dev')) {
+        badge.style.animationPlayState = ouvrir ? 'paused' : 'running';
+      }
+    });
+  });
+}
+
+async function chargerCalendrierMeteo(lat, lon) {
+  const zone = document.getElementById('calendrier-meteo');
+  if (!zone) return;
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&forecast_days=7`);
+    const data = await res.json();
+    const jours = data.daily.time.map((date, i) => {
+      const tmax = data.daily.temperature_2m_max[i];
+      const tmin = data.daily.temperature_2m_min[i];
+      const pluie = data.daily.precipitation_sum[i];
+      let alerte = '☀️ Sec — arrosage conseillé';
+      if (tmin < 2) alerte = '❄️ Risque de gel';
+      else if (pluie > 10) alerte = '🌧️ Fortes pluies prévues';
+      else if (pluie > 1) alerte = '💧 Pluie prévue';
+      const jourLabel = new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+      return `<div class="resultat-culture"><span class="nom">${jourLabel}</span><span style="font-size:12px;color:var(--gris-doux);">${tmin.toFixed(0)}°/${tmax.toFixed(0)}° — ${alerte}</span></div>`;
+    }).join('');
+    zone.innerHTML = jours;
+  } catch (e) {
+    zone.innerHTML = '<div class="disclaimer">Prévisions météo indisponibles pour le moment.</div>';
+  }
+}
+
+async function genererRapportPDF() {
+  const statutPdf = document.getElementById('statut-pdf');
+  const boutonPdf = document.getElementById('btn-generer-pdf');
+  if (!dernierDiagnostic) { alert("Lance d'abord un diagnostic."); return; }
+
+  boutonPdf.disabled = true;
+  statutPdf.textContent = "Génération du rapport en cours...";
+
+  const { jsPDF } = window.jspdf;
+  const { climat, sol, resultats, histFertilite, histCultive } = dernierDiagnostic;
+  const risques = calculerRisques(climat, sol, histFertilite, histCultive);
+  const rentabilite = calculerRentabilite(resultats);
+  const nomProprietaire = (prompt("Nom du propriétaire / exploitant à faire apparaître sur le rapport :", "") || '').trim() || 'Non renseigné';
+
+  const doc = new jsPDF();
+  let y = 20;
+
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("RAPPORT AGRIIA — DIAGNOSTIC DE TERRAIN", 20, y);
+  y += 6;
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(120, 120, 120);
+  doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} — document indicatif, non certifié par un organisme officiel`, 20, y);
+  y += 10;
+  doc.setTextColor(0, 0, 0);
+
+  // Capture de la carte si elle a déjà été chargée (onglet Carte visité)
+  try {
+    if (carte) {
+      carte.invalidateSize();
+      const canvas = await html2canvas(document.getElementById('carte-leaflet'), { useCORS: true, allowTaint: true });
+      const imgData = canvas.toDataURL('image/png');
+      doc.addImage(imgData, 'PNG', 20, y, 170, 80);
+      y += 88;
+    }
+  } catch (e) { /* si la capture échoue, on continue sans image */ }
+
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("Identification", 20, y); y += 7;
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(10.5);
+  doc.text(`Propriétaire / Exploitant : ${nomProprietaire}`, 20, y); y += 6;
+  doc.text(`Coordonnées : ${dernierDiagnostic.position.lat.toFixed(4)}, ${dernierDiagnostic.position.lon.toFixed(4)}`, 20, y); y += 10;
+
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("Climat & sol", 20, y); y += 7;
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(10.5);
+  doc.text(`Température moyenne : ${climat.tempMoy.toFixed(1)}°C — Pluviométrie annuelle : ${Math.round(climat.pluieTotale)}mm`, 20, y); y += 6;
+  doc.text(`Sol : pH ${sol.ph.toFixed(1)}, texture ${sol.texture}`, 20, y); y += 10;
+
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("Cultures recommandées", 20, y); y += 7;
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(10.5);
+  resultats.slice(0, 5).forEach(r => { doc.text(`- ${r.nom} : ${r.score}% de compatibilité`, 20, y); y += 6; });
+  y += 4;
+
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("Score de risques environnementaux", 20, y); y += 7;
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(10.5);
+  doc.text(`Sécheresse : ${risques.secheresse} — Érosion : ${risques.erosion} — Appauvrissement du sol : ${risques.appauvrissement}`, 20, y); y += 6;
+  doc.text(`Risque global : ${risques.global}`, 20, y); y += 10;
+
+  if (estMax()) {
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Estimation de rendement & chiffre d'affaires (indicative)", 20, y); y += 7;
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(10.5);
+    rentabilite.forEach(r => {
+      if (r.rendement) {
+        const ligneCA = r.caMin ? ` — CA projeté : ${r.caMin} - ${r.caMax} €/an` : '';
+        doc.text(`- ${r.nom} : ${r.rendement} — ${r.revenu}${ligneCA}`, 20, y); y += 6;
+      }
+    });
+    y += 6;
+  }
+
+  doc.setFontSize(8.5);
+  doc.setTextColor(140, 140, 140);
+  const disclaimer = "Ce document présente des estimations indicatives basées sur des données climatiques et pédologiques publiques (Open-Meteo, ISRIC SoilGrids) et des références agronomiques génériques. Il ne constitue ni une expertise foncière officielle, ni un audit financier, ni une vérification de titre de propriété. À faire valider par un professionnel (agronome, expert-comptable, notaire) avant toute décision d'investissement ou de financement.";
+  doc.text(doc.splitTextToSize(disclaimer, 170), 20, y);
+
+  doc.save(`Rapport-AgriIA-${new Date().toISOString().split('T')[0]}.pdf`);
+
+  boutonPdf.disabled = false;
+  statutPdf.textContent = "";
+}
+
+document.getElementById('btn-envoyer-carnet').addEventListener('click', () => {
+  document.getElementById('nt-notes').value = `Certification visée : ${document.getElementById('certif-souhaitee').selectedOptions[0].textContent}`;
+  document.querySelector('[data-vue="vue-terrains"]').click();
+  window.scrollTo(0, 0);
+});
+
+/* ============================================================
+   CARTE & IMPORT DE FICHIERS GÉOGRAPHIQUES (GeoJSON)
+   ============================================================ */
+let carte, groupeDessin, surfaceCourante = 0;
+
+function initCarte() {
+  carte = L.map('carte-leaflet').setView([7.5, -5.5], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(carte);
+
+  groupeDessin = new L.FeatureGroup();
+  carte.addLayer(groupeDessin);
+
+  const controleDessin = new L.Control.Draw({
+    draw: {
+      polygon: true, polyline: false, rectangle: true, circle: false, marker: false, circlemarker: false
+    },
+    edit: { featureGroup: groupeDessin }
+  });
+  carte.addControl(controleDessin);
+
+  carte.on(L.Draw.Event.CREATED, (e) => {
+    groupeDessin.clearLayers();
+    groupeDessin.addLayer(e.layer);
+    const aireM2 = turf.area(e.layer.toGeoJSON());
+    surfaceCourante = aireM2 / 10000;
+    document.getElementById('surface-affichee').textContent = `Surface sélectionnée : ${surfaceCourante.toFixed(2)} ha`;
+    document.getElementById('btn-surface-vers-carnet').disabled = false;
+
+    const centre = e.layer.getBounds().getCenter();
+    positionActuelle = { lat: centre.lat, lon: centre.lng };
+    document.getElementById('bloc-sol').style.display = 'block';
+  });
+}
+
+document.getElementById('input-file-geo').addEventListener('change', function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const estKml = /\.kml$/i.test(file.name);
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      let geojson;
+      if (estKml) {
+        const xmlDoc = new DOMParser().parseFromString(e.target.result, 'text/xml');
+        const erreurParsing = xmlDoc.querySelector('parsererror');
+        if (erreurParsing) throw new Error('KML invalide');
+        geojson = toGeoJSON.kml(xmlDoc);
+      } else {
+        geojson = JSON.parse(e.target.result);
+      }
+      groupeDessin.clearLayers();
+
+      const geoJsonLayer = L.geoJSON(geojson, {
+        onEachFeature: function (feature, layer) {
+          groupeDessin.addLayer(layer);
+        }
+      });
+
+      if (groupeDessin.getLayers().length > 0) {
+        carte.fitBounds(groupeDessin.getBounds());
+
+        const centreImport = groupeDessin.getBounds().getCenter();
+        positionActuelle = { lat: centreImport.lat, lon: centreImport.lng };
+        document.getElementById('bloc-sol').style.display = 'block';
+
+        const aireM2 = turf.area(groupeDessin.toGeoJSON());
+        if (aireM2 > 0) {
+          surfaceCourante = aireM2 / 10000;
+          document.getElementById('surface-affichee').textContent = `Surface importée : ${surfaceCourante.toFixed(2)} ha`;
+          document.getElementById('btn-surface-vers-carnet').disabled = false;
+        } else {
+          document.getElementById('surface-affichee').textContent = `Fichier géométrique importé avec succès`;
+          document.getElementById('btn-surface-vers-carnet').disabled = false;
+        }
+        alert("Fichier géographique importé et affiché avec succès !");
+      } else {
+        alert("Aucune géométrie valide trouvée dans ce fichier.");
+      }
+    } catch (err) {
+      alert("Erreur lors de la lecture du fichier. Assure-toi qu'il s'agit d'un fichier GeoJSON (.geojson, .json) ou KML (.kml) valide.");
+    }
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('btn-surface-vers-carnet').addEventListener('click', () => {
+  document.getElementById('nt-superficie').value = surfaceCourante.toFixed(2);
+  document.querySelector('[data-vue="vue-terrains"]').click();
+  window.scrollTo(0, 0);
+});
+
+/* ============================================================
+   CARNET DE TERRAINS — localStorage
+   ============================================================ */
+function chargerTerrains() {
+  try { return JSON.parse(localStorage.getItem('agriia_terrains') || '[]'); }
+  catch (e) { return []; }
+}
+function sauvegarderTerrains(liste) {
+  localStorage.setItem('agriia_terrains', JSON.stringify(liste));
+}
+
+/* ============================================================
+   TYPE DE TITRE FONCIER — référentiel à 2 niveaux (pays [+région] → type)
+   ============================================================ */
+const REFERENTIEL_TITRE_FONCIER = {
+  "France": {
+    exception: {
+      libelle: "Mon terrain est en Alsace-Moselle (régime local différent)",
+      types: ["Extrait du Livre foncier", "Bail rural (fermage / métayage)", "Indivision / succession en cours", "Autre"],
+      aide: "Livre foncier (droit local) — juge spécialisé, ministère de la Justice"
+    },
+    types: ["Acte de propriété notarié (achat)", "Acte de donation ou de partage", "Attestation notariée de propriété (succession)", "Bail rural (fermage / métayage)", "Indivision / succession en cours", "Autre"],
+    aide: "Publicité foncière : Service de la Publicité Foncière (SPF), DGFiP"
+  }
+};
+const TYPES_GENERIQUES = ["Propriétaire avec titre officiel", "Exploitant sans titre de propriété (location, indivision, usage local, etc.)", "Autre — précisez"];
+
+let etatTitreFoncier = { pays: null, exceptionCochee: false };
+
+function paysDetecte() {
+  return (positionActuelle && positionActuelle.pays && REFERENTIEL_TITRE_FONCIER[positionActuelle.pays])
+    ? positionActuelle.pays : null;
+}
+
+function listeTypesActuelle() {
+  if (!etatTitreFoncier.pays) return TYPES_GENERIQUES;
+  const ref = REFERENTIEL_TITRE_FONCIER[etatTitreFoncier.pays];
+  return (etatTitreFoncier.exceptionCochee && ref.exception) ? ref.exception.types : ref.types;
+}
+
+function aideActuelle() {
+  if (!etatTitreFoncier.pays) return null;
+  const ref = REFERENTIEL_TITRE_FONCIER[etatTitreFoncier.pays];
+  return (etatTitreFoncier.exceptionCochee && ref.exception) ? ref.exception.aide : ref.aide;
+}
+
+function construireRepereLecture() {
+  const div = document.createElement('div');
+  div.className = 'repere-pays' + (etatTitreFoncier.pays ? '' : ' inactif');
+  const nomAffiche = etatTitreFoncier.pays || 'Générique (international)';
+  div.innerHTML = `<span>📍 Référentiel : <span class="valeur">${nomAffiche}</span></span><span class="modifier">${etatTitreFoncier.pays ? 'Modifier' : 'Préciser un pays'}</span>`;
+  div.querySelector('.modifier').addEventListener('click', () => {
+    basculerRepereTitreFoncier(document.querySelector('.repere-pays-conteneur'), construireRepereEdition);
+  });
+  return div;
+}
+
+function construireRepereEdition() {
+  const div = document.createElement('div');
+  const select = document.createElement('select');
+  select.className = 'repere-pays-select';
+  select.innerHTML = '<option value="">Générique (international)</option>' +
+    Object.keys(REFERENTIEL_TITRE_FONCIER).map(p => `<option value="${p}">${p}</option>`).join('');
+  select.value = etatTitreFoncier.pays || '';
+  select.addEventListener('change', () => {
+    etatTitreFoncier.pays = select.value || null;
+    basculerRepereTitreFoncier(document.querySelector('.repere-pays-conteneur'), construireRepereLecture);
+    majException();
+    regenererNiveau2();
+  });
+  div.appendChild(select);
+  return div;
+}
+
+// Point 1 du motion : fondu de sortie (150ms) → échange du contenu → fondu d'entrée + hauteur (220ms). Symétrique.
+function basculerRepereTitreFoncier(conteneur, rendreModeCible) {
+  const modeActuel = conteneur.firstElementChild;
+  conteneur.style.height = conteneur.offsetHeight + 'px';
+  modeActuel.style.opacity = 0;
+
+  setTimeout(() => {
+    conteneur.innerHTML = '';
+    const nouveauMode = rendreModeCible();
+    nouveauMode.classList.add('repere-pays-mode');
+    conteneur.appendChild(nouveauMode);
+    nouveauMode.style.opacity = 0;
+    conteneur.style.height = nouveauMode.scrollHeight + 'px';
+    requestAnimationFrame(() => { nouveauMode.style.opacity = 1; });
+    setTimeout(() => { conteneur.style.height = 'auto'; }, 220);
+  }, 150);
+}
+
+// Point 2 du motion : reveal identique à .bandeau-identite ; crossfade du texte seul si on reste
+// visible en passant d'un pays à exception à un autre pays à exception.
+function majException() {
+  const zone = document.getElementById('zone-exception');
+  if (!zone) return;
+  const ref = etatTitreFoncier.pays ? REFERENTIEL_TITRE_FONCIER[etatTitreFoncier.pays] : null;
+  const aUneException = !!(ref && ref.exception);
+  const etaitVisible = zone.classList.contains('visible');
+
+  if (!aUneException) {
+    etatTitreFoncier.exceptionCochee = false;
+    zone.classList.remove('visible');
+    return;
+  }
+  const texte = zone.querySelector('.toggle-exception-texte');
+  if (etaitVisible) {
+    texte.style.opacity = 0;
+    setTimeout(() => { texte.textContent = ref.exception.libelle; texte.style.opacity = 1; }, 150);
+  } else {
+    texte.textContent = ref.exception.libelle;
+    zone.classList.add('visible');
+  }
+}
+
+// Point 3 du motion : flash-maj-options sur le select niveau 2 après régénération des <option>.
+function regenererNiveau2(avecFlash) {
+  const select = document.getElementById('nt-type');
+  if (!select) return;
+  const valeurPrecedente = select.value;
+  const types = listeTypesActuelle();
+  select.innerHTML = '<option value="">Sélectionner...</option>' + types.map(t => `<option value="${t}">${t}</option>`).join('');
+  if (types.includes(valeurPrecedente)) select.value = valeurPrecedente;
+
+  const aide = document.getElementById('aide-champ-titre-foncier');
+  const texteAide = aideActuelle();
+  if (aide) {
+    aide.textContent = texteAide || '';
+    aide.style.display = texteAide ? 'block' : 'none';
+    aide.classList.toggle('actif', etatTitreFoncier.exceptionCochee);
+  }
+
+  if (avecFlash !== false) {
+    select.classList.add('maj-options');
+    select.addEventListener('animationend', () => select.classList.remove('maj-options'), { once: true });
+  }
+  majChampAutre();
+}
+
+// Point 5 du motion : réutilise strictement le mécanisme du point 2, renommé .champ-autre-precision.
+function majChampAutre() {
+  const select = document.getElementById('nt-type');
+  const zone = document.getElementById('zone-autre-precision');
+  if (!select || !zone) return;
+  zone.classList.toggle('visible', select.value.startsWith('Autre'));
+}
+
+function rendreTitreFoncier() {
+  const widget = document.getElementById('titre-foncier-widget');
+  if (!widget) return;
+  widget.innerHTML = '';
+
+  const conteneurRepere = document.createElement('div');
+  conteneurRepere.className = 'repere-pays-conteneur';
+  const modeInitial = construireRepereLecture();
+  modeInitial.classList.add('repere-pays-mode');
+  conteneurRepere.appendChild(modeInitial);
+  widget.appendChild(conteneurRepere);
+
+  const zoneException = document.createElement('div');
+  zoneException.className = 'case-exception-regionale';
+  zoneException.id = 'zone-exception';
+  zoneException.innerHTML = `<div class="toggle-exception"><span class="case"></span><span class="toggle-exception-texte"></span></div>`;
+  zoneException.querySelector('.toggle-exception').addEventListener('click', () => {
+    etatTitreFoncier.exceptionCochee = !etatTitreFoncier.exceptionCochee;
+    zoneException.querySelector('.case').classList.toggle('cochee', etatTitreFoncier.exceptionCochee);
+    regenererNiveau2();
+  });
+  widget.appendChild(zoneException);
+
+  const select = document.createElement('select');
+  select.className = 'select-titre-foncier';
+  select.id = 'nt-type';
+  select.addEventListener('change', majChampAutre);
+  widget.appendChild(select);
+
+  const aide = document.createElement('div');
+  aide.className = 'aide-champ';
+  aide.id = 'aide-champ-titre-foncier';
+  widget.appendChild(aide);
+
+  const zoneAutre = document.createElement('div');
+  zoneAutre.className = 'champ-autre-precision';
+  zoneAutre.id = 'zone-autre-precision';
+  zoneAutre.innerHTML = `<label class="champ-label">Précise le type de titre</label><input type="text" id="nt-type-autre-precision" placeholder="Ex. usufruit, concession, servitude...">`;
+  widget.appendChild(zoneAutre);
+
+  majException();
+  regenererNiveau2(false); // pas de flash au tout premier rendu
+}
+
+function initialiserTitreFoncier() {
+  etatTitreFoncier = { pays: paysDetecte(), exceptionCochee: false };
+  rendreTitreFoncier();
+}
+
+document.getElementById('btn-ajouter-terrain').addEventListener('click', () => {
+  const nom = document.getElementById('nt-nom').value.trim();
+  if (!nom) { alert("Donne un nom à ton terrain."); return; }
+  const terrains = chargerTerrains();
+  if (!estPremium() && terrains.length >= LIMITE_TERRAINS_GRATUIT) {
+    alert(`Le plan Standard permet d'enregistrer jusqu'à ${LIMITE_TERRAINS_GRATUIT} terrains. Passe en Premium pour un carnet illimité.`);
+    document.querySelector('[data-vue="vue-abonnement"]').click();
+    return;
+  }
+  const nouvelId = 't' + Date.now();
+  // Dette technique résolue : on conserve la valeur choisie (bio/hve/usda), pas seulement son libellé en texte libre,
+  // pour pouvoir pré-sélectionner le bon onglet dans cert-section.
+  const certifSouhaitee = document.getElementById('certif-souhaitee').value || '';
+  const typeChoisi = document.getElementById('nt-type').value;
+  const precisionAutre = (document.getElementById('nt-type-autre-precision') || {}).value?.trim();
+  const typeFinal = typeChoisi.startsWith('Autre') && precisionAutre ? `${typeChoisi} — ${precisionAutre}` : typeChoisi;
+  terrains.push({
+    id: nouvelId,
+    nom,
+    type: typeFinal,
+    numero: document.getElementById('nt-numero').value.trim(),
+    superficie: document.getElementById('nt-superficie').value.trim(),
+    notes: document.getElementById('nt-notes').value.trim(),
+    certifSouhaitee
+  });
+  sauvegarderTerrains(terrains);
+  ['nt-nom', 'nt-numero', 'nt-superficie', 'nt-notes'].forEach(id => document.getElementById(id).value = '');
+  initialiserTitreFoncier();
+  afficherTerrains();
+
+  if (profilActif() === 'qualite' && certifSouhaitee) {
+    setTimeout(() => {
+      const carteTerrain = document.getElementById(`cert-${nouvelId}`);
+      if (carteTerrain) carteTerrain.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  }
+});
+
+function afficherTerrains() {
+  const terrains = chargerTerrains();
+  const zone = document.getElementById('liste-terrains');
+  if (terrains.length === 0) {
+    zone.innerHTML = '<div class="vide">Aucun terrain enregistré pour l\'instant.</div>';
+    appliquerHabillageTerrains(profilActif());
+    return;
+  }
+  zone.innerHTML = '';
+  terrains.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'carte-bloc terrain-card';
+    div.innerHTML = `
+      <button class="supprimer">Supprimer</button>
+      <h3>${t.nom}</h3>
+      <div class="meta">${t.type}${t.numero ? ' · ' + t.numero : ''}${t.superficie ? ' · ' + t.superficie + ' ha' : ''}</div>
+      ${t.notes ? `<div class="notes">${t.notes}</div>` : ''}
+      <div class="cert-section" id="cert-${t.id}">
+        <div class="cert-titre">Parcours certification</div>
+        <div class="cert-tabs">
+          <button class="cert-tab actif" data-label="bio">Bio (France)</button>
+          <button class="cert-tab" data-label="hve">HVE (France)</button>
+          <button class="cert-tab" data-label="usda">USDA Organic (USA)</button>
+        </div>
+        <div class="cert-anneau-ligne" style="text-align:center;">
+          <div class="anneau-progression anneau-cert" id="anneau-cert-${t.id}" style="margin: 0 auto 4px;">
+            <div class="anneau-contenu">
+              <span class="compteur-anneau" id="compteur-cert-${t.id}">0/0</span>
+              <span class="anneau-unite">critères</span>
+            </div>
+          </div>
+        </div>
+        <ul class="cert-checklist"></ul>
+        <div class="cert-organisme"></div>
+      </div>
+    `;
+    div.querySelector('.supprimer').addEventListener('click', () => {
+      if (!confirm(`Supprimer "${t.nom}" ?`)) return;
+      sauvegarderTerrains(chargerTerrains().filter(x => x.id !== t.id));
+      afficherTerrains();
+    });
+    zone.appendChild(div);
+    initSectionCertification(t.id, div.querySelector(`#cert-${t.id}`), t.certifSouhaitee);
+  });
+
+  appliquerHabillageTerrains(profilActif());
+}
+
+/* ============================================================
+   PARCOURS CERTIFICATION
+   ============================================================ */
+const LABELS_CERTIFICATION = {
+  bio: {
+    nom: "Bio (France)",
+    organisme: 'Contact : <a href="https://www.agencebio.org" target="_blank">Agence Bio</a> — trouve un organisme certificateur agréé.',
+    criteres: [
+      { id: "bio1", texte: "Aucun intrant chimique de synthèse depuis 2-3 ans" },
+      { id: "bio2", texte: "Semences ou plants issus de l'agriculture biologique" },
+      { id: "bio3", texte: "Pas d'OGM utilisés" },
+      { id: "bio4", texte: "Registre des pratiques tenu à jour" },
+      { id: "bio5", texte: "Premier contact pris avec un organisme certificateur" }
+    ]
+  },
+  hve: {
+    nom: "HVE (France)",
+    organisme: 'Contact : <a href="https://agriculture.gouv.fr/la-certification-environnementale" target="_blank">Chambre d\'Agriculture</a> de ton département.',
+    criteres: [
+      { id: "hve1", texte: "Stratégie de limitation des produits phytosanitaires" },
+      { id: "hve2", texte: "Gestion raisonnée de la fertilisation" },
+      { id: "hve3", texte: "Gestion maîtrisée de la ressource en eau" },
+      { id: "hve4", texte: "Maintien d'infrastructures agroécologiques (haies, bandes enherbées)" }
+    ]
+  },
+  usda: {
+    nom: "USDA Organic (USA)",
+    organisme: 'Contact : <a href="https://www.ams.usda.gov/services/organic-certification" target="_blank">USDA National Organic Program</a>.',
+    criteres: [
+      { id: "usda1", texte: "Période de transition de 3 ans sans substances interdites" },
+      { id: "usda2", texte: "Plan de système biologique documenté" },
+      { id: "usda3", texte: "Pas d'OGM, boues d'épuration ou radiation ionisante" },
+      { id: "usda4", texte: "Zones tampons vis-à-vis des terrains non-bio voisins" },
+      { id: "usda5", texte: "Registres des semences, intrants et ventes tenus à jour" }
+    ]
+  }
+};
+
+function chargerCertifications() {
+  try { return JSON.parse(localStorage.getItem('agriia_certifications') || '{}'); }
+  catch (e) { return {}; }
+}
+function sauvegarderCertifications(data) {
+  localStorage.setItem('agriia_certifications', JSON.stringify(data));
+}
+
+function initSectionCertification(terrainId, container, labelPreselectionne) {
+  let certifs = chargerCertifications();
+  if (!certifs[terrainId]) certifs[terrainId] = {};
+  let labelActif = (labelPreselectionne && LABELS_CERTIFICATION[labelPreselectionne]) ? labelPreselectionne : 'bio';
+  const dernierPctParLabel = {};
+
+  const tabs = container.querySelectorAll('.cert-tab');
+  tabs.forEach(t => t.classList.toggle('actif', t.dataset.label === labelActif));
+  const checklist = container.querySelector('.cert-checklist');
+  const anneauCert = container.querySelector('.anneau-cert');
+  const compteurCert = container.querySelector('.anneau-cert .compteur-anneau');
+  const organismeDiv = container.querySelector('.cert-organisme');
+
+  function rendre() {
+    const label = LABELS_CERTIFICATION[labelActif];
+    const coches = certifs[terrainId][labelActif] || [];
+    checklist.innerHTML = '';
+    label.criteres.forEach(critere => {
+      const li = document.createElement('li');
+      const estCoche = coches.includes(critere.id);
+      li.innerHTML = `
+        <input type="checkbox" id="${terrainId}-${critere.id}" ${estCoche ? 'checked' : ''}>
+        <label for="${terrainId}-${critere.id}">${critere.texte}</label>
+      `;
+      li.querySelector('input').addEventListener('change', (e) => {
+        let liste = certifs[terrainId][labelActif] || [];
+        if (e.target.checked) liste.push(critere.id);
+        else liste = liste.filter(id => id !== critere.id);
+        certifs[terrainId][labelActif] = liste;
+        sauvegarderCertifications(certifs);
+        rendre();
+      });
+      checklist.appendChild(li);
+    });
+
+    const pctCible = Math.round((coches.length / label.criteres.length) * 100);
+    compteurCert.textContent = `${coches.length}/${label.criteres.length}`;
+    const dernierPct = dernierPctParLabel[labelActif];
+    if (dernierPct === undefined) {
+      // Premier affichage de cet onglet pour ce terrain : révélation "time-lapse"
+      animerAnneau(anneauCert, null, 0, pctCible, 1200, easeCroissance);
+    } else if (dernierPct !== pctCible) {
+      // Coche/décoche un critère (ou nouvelle valeur en revisitant l'onglet) : ajustement discret
+      animerAnneau(anneauCert, null, dernierPct, pctCible, 450, easeMiseAJour);
+    }
+    dernierPctParLabel[labelActif] = pctCible;
+
+    organismeDiv.innerHTML = label.organisme;
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('actif'));
+      tab.classList.add('actif');
+      labelActif = tab.dataset.label;
+      rendre();
+    });
+  });
+  rendre();
+}
+
+/* ============================================================
+   PERSONNALISATION PAR PROFIL
+   ============================================================
+   Clé canonique désormais écrite par l'onboarding (écrans "état" + "objectif") :
+     - agriia_profil : 'neo' | 'structuration' | 'qualite' | 'multi-parcelles'
+   profilActuel() l'expose telle quelle (comme niveauActuel() pour l'abonnement).
+   profilActif() la traduit vers les codes internes utilisés par le dashboard
+   (neo/famille/qualite/gestionnaire), avec repli sur l'ancien schéma à deux clés
+   (agriia_persona / agriia_objectif) si jamais il était utilisé ailleurs. */
+
+const PROFIL_VERS_PERSONA_INTERNE = {
+  neo: 'neo',
+  structuration: 'famille',
+  qualite: 'qualite',
+  'multi-parcelles': 'gestionnaire'
+};
+
+const OBJECTIF_VERS_PERSONA = {
+  cultiver: 'neo',
+  financement: 'famille',
+  certification: 'qualite',
+  piloter: 'gestionnaire'
+};
+
+const TEXTES_BANDEAU = {
+  famille: { icone: '🏦', texte: "Ton objectif : Sécuriser mon terrain et préparer un financement" },
+  qualite: { icone: '📋', texte: "Ton objectif : Viser une certification" },
+  gestionnaire: { icone: '📈', texte: "Ton objectif : Piloter plusieurs exploitations" }
+};
+
+function profilActuel() {
+  return localStorage.getItem('agriia_profil') || 'neo';
+}
+
+function profilActif() {
+  const nouveauProfil = localStorage.getItem('agriia_profil');
+  if (nouveauProfil && PROFIL_VERS_PERSONA_INTERNE[nouveauProfil]) {
+    return PROFIL_VERS_PERSONA_INTERNE[nouveauProfil];
+  }
+  // Repli sur l'ancien schéma (non utilisé actuellement, gardé par sécurité)
+  const direct = localStorage.getItem('agriia_persona');
+  if (direct && ['neo', 'famille', 'qualite', 'gestionnaire'].includes(direct)) return direct;
+  const objectif = localStorage.getItem('agriia_objectif');
+  return OBJECTIF_VERS_PERSONA[objectif] || 'neo';
+}
+
+
+function appliquerBandeauIdentite(profil) {
+  const bandeau = document.getElementById('bandeau-identite');
+  if (!bandeau) return;
+  const config = TEXTES_BANDEAU[profil];
+  if (config) {
+    document.getElementById('bandeau-icone').textContent = config.icone;
+    document.getElementById('bandeau-texte').textContent = config.texte;
+  }
+  bandeau.classList.toggle('visible', Boolean(config));
+}
+
+function appliquerOngletParDefaut(profil) {
+  if (profil === 'gestionnaire') {
+    const btnCarte = document.querySelector('.bottom-nav [data-vue="vue-carte"]');
+    if (btnCarte) btnCarte.click();
+  }
+}
+
+function reordonnerEnfants(parent, ids) {
+  if (!parent) return;
+  const enfants = ids.map(id => document.getElementById(id)).filter(Boolean);
+  enfants.forEach(el => el.classList.add('reordre-sortie'));
+  setTimeout(() => {
+    enfants.forEach(el => parent.appendChild(el));
+    requestAnimationFrame(() => {
+      enfants.forEach(el => el.classList.remove('reordre-sortie'));
+    });
+  }, 160);
+}
+
+function crossfadeBadge(el, appliquerChangement) {
+  if (!el) return;
+  el.style.opacity = 0;
+  setTimeout(() => {
+    appliquerChangement();
+    el.style.opacity = 1;
+  }, 150);
+}
+
+function appliquerHabillageDiagnostic(profil) {
+  const resultats = document.getElementById('resultats-diagnostic');
+  const blocPremium = document.getElementById('bloc-premium-diagnostic');
+  const blocCertifQuestion = document.getElementById('bloc-certif-question');
+  if (!resultats || !blocPremium || !blocCertifQuestion) return;
+  const parent = resultats.parentNode;
+  // bloc-certif-question remonté juste après les résultats pour le profil "qualite",
+  // sinon ordre par défaut (bloc premium puis bloc-certif-question).
+  const ordre = profil === 'qualite'
+    ? ['bloc-certif-question', 'bloc-premium-diagnostic']
+    : ['bloc-premium-diagnostic', 'bloc-certif-question'];
+  reordonnerEnfants(parent, ordre);
+  // Le réordonnancement du profil "famille" (Score de risques + PDF remontés) est géré
+  // directement dans afficherBlocPremiumDiagnostic(), car ce bloc est régénéré à chaque
+  // diagnostic / changement d'abonnement.
+}
+
+function appliquerHabillageTerrains(profil) {
+  const conteneur = document.getElementById('liste-fonctions-verrouillees');
+  if (conteneur) {
+    const idsAttendus = ['fv-rapport-technique', 'fv-score-risques', 'fv-rapport-pdf', 'fv-ca-projete', 'fv-ia-ndvi'];
+    if (idsAttendus.every(id => document.getElementById(id))) {
+      // Famille : Score de risques + Rapport PDF détaillé remontent en position 1-2.
+      const ordre = profil === 'famille'
+        ? ['fv-score-risques', 'fv-rapport-pdf', 'fv-rapport-technique', 'fv-ca-projete', 'fv-ia-ndvi']
+        : idsAttendus;
+      reordonnerEnfants(conteneur, ordre);
+    }
+  }
+
+  const compteur = document.getElementById('compteur-terrains-gestionnaire');
+  if (compteur) {
+    if (profil === 'gestionnaire') {
+      const nb = chargerTerrains().length;
+      document.getElementById('ctg-valeur').textContent = estPremium() ? `${nb}` : `${nb}/${LIMITE_TERRAINS_GRATUIT}`;
+      compteur.style.display = 'flex';
+    } else {
+      compteur.style.display = 'none';
+    }
+  }
+}
+
+function appliquerHabillageCarte(profil) {
+  const teaser = document.getElementById('teaser-roi-carte');
+  if (teaser) teaser.style.display = (profil === 'gestionnaire' && !estMax()) ? 'block' : 'none';
+}
+
+function appliquerHabillageAbonnement(profil) {
+  const badgePremium = document.getElementById('badge-recommande-premium');
+  const badgeMax = document.getElementById('badge-etiquette-max');
+  if (!badgePremium || !badgeMax) return;
+  const cartePremium = document.querySelector('.plan-carte.premium');
+  const carteMax = document.querySelector('.plan-carte.max');
+  if (profil === 'gestionnaire') {
+    crossfadeBadge(badgePremium, () => { badgePremium.style.display = 'none'; });
+    crossfadeBadge(badgeMax, () => { badgeMax.textContent = 'Recommandé'; });
+    if (cartePremium) cartePremium.classList.remove('mise-en-avant');
+    if (carteMax) carteMax.classList.add('mise-en-avant');
+  } else {
+    crossfadeBadge(badgePremium, () => { badgePremium.style.display = 'block'; });
+    crossfadeBadge(badgeMax, () => { badgeMax.textContent = 'Expert'; });
+    if (carteMax) carteMax.classList.remove('mise-en-avant');
+    if (cartePremium) cartePremium.classList.add('mise-en-avant');
+  }
+}
+
+function appliquerProfil() {
+  const profil = profilActif();
+  appliquerBandeauIdentite(profil);
+  appliquerOngletParDefaut(profil);
+  appliquerHabillageDiagnostic(profil);
+  appliquerHabillageTerrains(profil);
+  appliquerHabillageCarte(profil);
+  appliquerHabillageAbonnement(profil);
+}
+
+document.getElementById('btn-modifier-objectif').addEventListener('click', () => {
+  const overlay = document.getElementById('onboarding-overlay');
+  const track = document.getElementById('onboarding-track');
+  const pages = document.querySelectorAll('.onboarding-page');
+
+  // Retrouve dynamiquement l'écran "objectif", quelle que soit sa position dans le tunnel
+  let indexObjectif = 0;
+  let groupeObjectif = null;
+  pages.forEach((page, i) => {
+    const groupe = page.querySelector('.onboarding-reponses[data-question="objectif"]');
+    if (groupe) { indexObjectif = i; groupeObjectif = groupe; }
+  });
+
+  overlay.classList.remove('hidden');
+
+  // Pré-sélectionne visuellement le choix précédent
+  if (groupeObjectif) {
+    const profilStocke = localStorage.getItem('agriia_profil');
+    groupeObjectif.querySelectorAll('.onboarding-reponse').forEach(r => {
+      r.classList.toggle('selectionnee', r.dataset.valeur === profilStocke);
+    });
+  }
+
+  // Saute directement à cet écran plutôt que de revenir à l'écran 1
+  track.scrollLeft = track.clientWidth * indexObjectif;
+  track.dispatchEvent(new Event('scroll'));
+});
+
+/* ============================================================
+   INITIALISATION
+   ============================================================ */
+initCarte();
+afficherTerrains();
+majAffichageAbonnement();
+appliquerProfil();
+initialiserTitreFoncier();
+majRU();
+
+/* ============================================================
+   PWA
+   ============================================================ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { });
+  });
+}
+
+let evenementInstallation = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  evenementInstallation = e;
+  const btn = document.getElementById('btn-installer-app');
+  if (btn) btn.style.display = 'block';
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btn-installer-app');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      if (!evenementInstallation) return;
+      evenementInstallation.prompt();
+      await evenementInstallation.userChoice;
+      evenementInstallation = null;
+      btn.style.display = 'none';
+    });
+  }
+});
+</script>
+</body>
+</html>
