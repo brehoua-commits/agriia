@@ -1960,13 +1960,24 @@ function appliquerProfil() {
 }
 
 document.getElementById('btn-modifier-objectif').addEventListener('click', () => {
-  // Comportement partiel : le fichier actuel n'a pas d'écran de capture d'objectif ("Écran 2")
-  // ni de classe .selectionnee pour marquer le choix précédent (cf. blocage remonté au Chef de
-  // Projet). En attendant cette brique, on rouvre l'overlay d'onboarding existant depuis le début.
   const overlay = document.getElementById('onboarding-overlay');
   const track = document.getElementById('onboarding-track');
+  const pages = document.querySelectorAll('.onboarding-page');
+  const dernierePage = pages.length - 1; // écran "objectif", en fin de tunnel
+
   overlay.classList.remove('hidden');
-  track.scrollLeft = 0;
+
+  // Pré-sélectionne visuellement le choix précédent sur l'écran "objectif"
+  const profilStocke = localStorage.getItem('agriia_profil');
+  const groupeObjectif = pages[dernierePage].querySelector('.onboarding-reponses[data-question="objectif"]');
+  if (groupeObjectif) {
+    groupeObjectif.querySelectorAll('.onboarding-reponse').forEach(r => {
+      r.classList.toggle('selectionnee', r.dataset.valeur === profilStocke);
+    });
+  }
+
+  // Saute directement à cet écran plutôt que de revenir à l'écran 1
+  track.scrollLeft = track.clientWidth * dernierePage;
   track.dispatchEvent(new Event('scroll'));
 });
 
