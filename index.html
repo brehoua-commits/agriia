@@ -446,10 +446,33 @@
     <div class="onboarding-track" id="onboarding-track">
 
       <div class="onboarding-page">
+        <div class="onboarding-illustration">🌾</div>
+        <h2 class="onboarding-titre">Où en es-tu avec tes terrains ?</h2>
+        <div class="onboarding-reponses" data-question="etat">
+          <button class="onboarding-reponse" data-valeur="neo">Je n'ai pas encore de terrain</button>
+          <button class="onboarding-reponse" data-valeur="structuration">J'ai un terrain, je veux le sécuriser</button>
+          <button class="onboarding-reponse" data-valeur="qualite">Je veux structurer une certification</button>
+          <button class="onboarding-reponse" data-valeur="multi-parcelles">Je gère déjà plusieurs parcelles</button>
+        </div>
+      </div>
+
+      <div class="onboarding-page">
+        <div class="onboarding-illustration">🎯</div>
+        <h2 class="onboarding-titre">Quel est ton objectif principal avec AgriIA ?</h2>
+        <div class="onboarding-reponses" data-question="objectif">
+          <button class="onboarding-reponse" data-valeur="neo">Cultiver ce terrain efficacement</button>
+          <button class="onboarding-reponse" data-valeur="structuration">Sécuriser mon terrain et préparer un financement</button>
+          <button class="onboarding-reponse" data-valeur="qualite">Viser une certification</button>
+          <button class="onboarding-reponse" data-valeur="multi-parcelles">Piloter plusieurs exploitations</button>
+        </div>
+      </div>
+
+      <div class="onboarding-page">
         <div class="onboarding-illustration">🌱</div>
         <h2 class="onboarding-titre">Bienvenue sur AgriIA</h2>
         <p class="onboarding-texte">Un compagnon simple pour comprendre ton terrain et savoir quoi y cultiver, où que tu sois dans le monde.</p>
       </div>
+
 
       <div class="onboarding-page">
         <div class="onboarding-illustration">🔍</div>
@@ -473,28 +496,6 @@
         <div class="onboarding-illustration">⭐</div>
         <h2 class="onboarding-titre">Espace Premium</h2>
         <p class="onboarding-texte">Débloque un rapport technique approfondi, un score de risques et une estimation de rentabilité, avec export PDF pour tes démarches bancaires.</p>
-      </div>
-
-      <div class="onboarding-page">
-        <div class="onboarding-illustration">🌾</div>
-        <h2 class="onboarding-titre">Où en es-tu avec tes terrains ?</h2>
-        <div class="onboarding-reponses" data-question="etat">
-          <button class="onboarding-reponse" data-valeur="neo">Je n'ai pas encore de terrain</button>
-          <button class="onboarding-reponse" data-valeur="structuration">J'ai un terrain, je veux le sécuriser</button>
-          <button class="onboarding-reponse" data-valeur="qualite">Je veux structurer une certification</button>
-          <button class="onboarding-reponse" data-valeur="multi-parcelles">Je gère déjà plusieurs parcelles</button>
-        </div>
-      </div>
-
-      <div class="onboarding-page">
-        <div class="onboarding-illustration">🎯</div>
-        <h2 class="onboarding-titre">Quel est ton objectif principal avec AgriIA ?</h2>
-        <div class="onboarding-reponses" data-question="objectif">
-          <button class="onboarding-reponse" data-valeur="neo">Cultiver ce terrain efficacement</button>
-          <button class="onboarding-reponse" data-valeur="structuration">Sécuriser mon terrain et préparer un financement</button>
-          <button class="onboarding-reponse" data-valeur="qualite">Viser une certification</button>
-          <button class="onboarding-reponse" data-valeur="multi-parcelles">Piloter plusieurs exploitations</button>
-        </div>
       </div>
 
     </div>
@@ -1963,21 +1964,27 @@ document.getElementById('btn-modifier-objectif').addEventListener('click', () =>
   const overlay = document.getElementById('onboarding-overlay');
   const track = document.getElementById('onboarding-track');
   const pages = document.querySelectorAll('.onboarding-page');
-  const dernierePage = pages.length - 1; // écran "objectif", en fin de tunnel
+
+  // Retrouve dynamiquement l'écran "objectif", quelle que soit sa position dans le tunnel
+  let indexObjectif = 0;
+  let groupeObjectif = null;
+  pages.forEach((page, i) => {
+    const groupe = page.querySelector('.onboarding-reponses[data-question="objectif"]');
+    if (groupe) { indexObjectif = i; groupeObjectif = groupe; }
+  });
 
   overlay.classList.remove('hidden');
 
-  // Pré-sélectionne visuellement le choix précédent sur l'écran "objectif"
-  const profilStocke = localStorage.getItem('agriia_profil');
-  const groupeObjectif = pages[dernierePage].querySelector('.onboarding-reponses[data-question="objectif"]');
+  // Pré-sélectionne visuellement le choix précédent
   if (groupeObjectif) {
+    const profilStocke = localStorage.getItem('agriia_profil');
     groupeObjectif.querySelectorAll('.onboarding-reponse').forEach(r => {
       r.classList.toggle('selectionnee', r.dataset.valeur === profilStocke);
     });
   }
 
   // Saute directement à cet écran plutôt que de revenir à l'écran 1
-  track.scrollLeft = track.clientWidth * dernierePage;
+  track.scrollLeft = track.clientWidth * indexObjectif;
   track.dispatchEvent(new Event('scroll'));
 });
 
