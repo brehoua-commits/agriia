@@ -19,59 +19,184 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   :root {
-    --foret: #0b132b;
-    --feuille: #00f2fe;
-    --feuille-clair: #22c55e;
-    --rosee: #0b132b;
-    --terre: #22c55e;
-    --terre-clair: rgba(0,242,254,0.12);
-    --terre-fonce: #00f2fe;
-    --sauge: rgba(0,242,254,0.18);
-    --texte: #f1f5f9;
-    --texte-doux: #94a3b8;
-    --amber: #fbbf24;
-    --terracotta: #fb7185;
-    --panneau: rgba(20,30,55,0.72);
+    /* Charte graphique v2 — 6 couleurs de marque + 1 sémantique */
+    --fond: #0d0d0b;
+    --carbone: #191915;
+    --os: #f2f0ea;
+    --gris-doux: #8c887e;
+    --chlorophylle: #5ea85a;
+    --argile: #c17a4e;
+    --brique: #b3503f;
+    --bordure: rgba(255,255,255,0.08);
+
+    /* Tokens motion design */
+    --easing-entree: cubic-bezier(0.22, 1, 0.36, 1);
+    --easing-sortie: cubic-bezier(0.4, 0, 1, 1);
+    --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --easing-confirmation: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --duree-micro: 150ms;
+    --duree-panneau: 380ms;
+    --duree-sortie: 220ms;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; padding: 0; height: 100%;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: radial-gradient(ellipse at top, #142046 0%, #0b132b 60%);
-    color: var(--texte);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--fond);
+    color: var(--os);
   }
   #app { display: flex; flex-direction: column; height: 100vh; }
 
   header {
-    background: linear-gradient(160deg, rgba(0,242,254,0.14) 0%, rgba(11,19,43,0.95) 70%);
-    border-bottom: 1px solid var(--sauge);
+    border-bottom: 1px solid var(--bordure);
     color: #fff;
     padding: 26px 22px 20px;
     flex-shrink: 0;
   }
   header h1 {
-    margin: 0; font-size: 26px; line-height: 1.15;
-    font-family: 'Fraunces', serif; font-style: italic; font-weight: 600;
-    letter-spacing: -0.3px;
-    text-shadow: 0 0 18px rgba(0,242,254,0.35);
+    margin: 0; font-size: 26px; line-height: 1.2;
+    font-weight: 800; letter-spacing: -0.5px;
   }
-  header p { margin: 7px 0 0; font-size: 13.5px; opacity: 0.75; letter-spacing: 0.2px; color: var(--texte-doux); }
+  header p { margin: 7px 0 0; font-size: 13.5px; opacity: 0.75; letter-spacing: 0.2px; color: var(--gris-doux); }
 
   .vue { display: none; flex: 1; overflow-y: auto; padding: 18px 16px; padding-bottom: 104px; }
   .vue.active { display: block; }
 
+  .bandeau-identite {
+    display: flex; align-items: center; gap: 9px; flex-shrink: 0;
+    background: rgba(94,168,90,0.08); border-bottom: 1px solid transparent;
+    padding: 0 16px; font-size: 12.5px; color: var(--os);
+    max-height: 0; opacity: 0; overflow: hidden;
+    transition: max-height var(--duree-panneau) var(--easing-entree),
+                opacity 220ms var(--easing-standard),
+                padding var(--duree-panneau) var(--easing-entree),
+                border-color 220ms var(--easing-standard);
+  }
+  .bandeau-identite.visible {
+    max-height: 60px; opacity: 1; padding-top: 10px; padding-bottom: 10px;
+    border-bottom-color: var(--gris-doux);
+  }
+  .bandeau-identite .bandeau-icone { font-size: 15px; flex-shrink: 0; }
+  .bandeau-identite .bandeau-texte { flex: 1 1 auto; line-height: 1.35; }
+  .bandeau-identite .bandeau-modifier {
+    background: none; border: none; color: var(--chlorophylle); font-weight: 700;
+    font-size: 12px; cursor: pointer; padding: 6px 4px; flex-shrink: 0; font-family: inherit;
+    text-decoration: underline; text-underline-offset: 2px;
+    transition: color var(--duree-micro) var(--easing-standard),
+                transform 100ms var(--easing-standard);
+  }
+  .bandeau-identite .bandeau-modifier:active { transform: scale(0.94); }
+
+  .compteur-terrains-gestionnaire {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--carbone); border: 1px solid var(--argile); border-radius: 14px;
+    padding: 12px 14px; margin-bottom: 14px; font-size: 12.5px; color: var(--os);
+  }
+  .compteur-terrains-gestionnaire .ctg-label strong { color: var(--argile); }
+  .compteur-terrains-gestionnaire button { width: auto; padding: 8px 12px; font-size: 11.5px; margin: 0; white-space: nowrap; }
+
+  .teaser-roi-carte {
+    border: 1px dashed var(--argile); border-radius: 14px; padding: 14px; margin-top: 4px;
+    background: rgba(193,122,78,0.05); text-align: center;
+  }
+  .teaser-roi-carte .tr-titre { font-weight: 700; color: #fff; font-size: 13.5px; margin-bottom: 4px; }
+  .teaser-roi-carte .tr-texte { font-size: 12px; color: var(--gris-doux); margin-bottom: 10px; line-height: 1.4; }
+  .teaser-roi-carte button { width: auto; padding: 8px 16px; font-size: 12px; margin: 0 auto; }
+
+  @keyframes glisser-apparition {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  #compteur-terrains-gestionnaire, #teaser-roi-carte {
+    animation: glisser-apparition var(--duree-panneau) var(--easing-entree) both;
+  }
+
+  .reordre-sortie {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 140ms var(--easing-standard), transform 140ms var(--easing-standard);
+  }
+
+  /* -------- Mise en avant sans glow (Option A — respiration par ombre neutre) -------- */
+  @keyframes respiration-elevation {
+    0%, 100% { transform: scale(1);     box-shadow: 0 2px 6px rgba(0,0,0,0.10); }
+    50%      { transform: scale(1.006); box-shadow: 0 10px 22px rgba(0,0,0,0.20); }
+  }
+  .mise-en-avant {
+    animation: respiration-elevation 3200ms ease-in-out infinite;
+  }
+
+  /* -------- Micro-feedback tactile cartes plates -------- */
+  .carte-plate, .carte-bloc, .plan-carte, .terrain-card {
+    transition: transform 100ms var(--easing-standard),
+                box-shadow 140ms var(--easing-standard),
+                border-color 140ms var(--easing-standard);
+  }
+  .carte-plate:hover, .carte-bloc:hover, .plan-carte:hover, .terrain-card:hover {
+    border-color: var(--gris-doux);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+  }
+  .carte-plate:active, .carte-bloc:active, .plan-carte:active, .terrain-card:active {
+    transform: scale(0.988);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+  }
+
+  /* -------- Badges de risque (3 niveaux, pastilles translucides) -------- */
+  .badge-risque {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 8px;
+    font-size: 11.5px; font-weight: 700;
+  }
+  .badge-risque.faible { background: rgba(94,168,90,0.15); color: var(--chlorophylle); }
+  .badge-risque.modere { background: rgba(193,122,78,0.15); color: var(--argile); }
+  .badge-risque.eleve  { background: rgba(179,80,63,0.18);  color: var(--brique); }
+
+  /* -------- Anneau de croissance (diagnostic hero + certification) -------- */
+  .anneau-progression {
+    --pct: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--chlorophylle) calc(var(--pct) * 1%), var(--bordure) 0);
+    display: grid; place-items: center;
+    transition: transform 220ms var(--easing-standard);
+    flex-shrink: 0;
+  }
+  .anneau-progression::before {
+    content: '';
+    grid-area: 1 / 1;
+    width: 76%; height: 76%; border-radius: 50%;
+    background: var(--carbone);
+  }
+  .anneau-progression .anneau-contenu {
+    grid-area: 1 / 1; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .compteur-anneau { font-variant-numeric: tabular-nums; font-weight: 800; color: #fff; line-height: 1; }
+  .anneau-unite { font-size: 10px; color: var(--gris-doux); margin-top: 2px; }
+
+  .anneau-hero { width: 76px; height: 76px; }
+  .anneau-hero .compteur-anneau { font-size: 15px; }
+  .anneau-hero .anneau-unite { font-size: 8px; }
+
+  .anneau-cert { width: 92px; height: 92px; }
+  .anneau-cert .compteur-anneau { font-size: 18px; }
+
+  .hero-resultat { display: flex; align-items: center; gap: 14px; padding-bottom: 12px; margin-bottom: 8px; border-bottom: 1px solid var(--bordure); }
+  .hero-resultat .hero-nom { font-weight: 700; font-size: 14.5px; color: var(--os); }
+  .hero-resultat .hero-legende { font-size: 11px; color: var(--gris-doux); }
+  .ligne-compacte { display: flex; justify-content: space-between; padding: 7px 0; font-size: 12.5px; color: var(--gris-doux); }
+  .ligne-compacte .pct-haut { color: var(--chlorophylle); font-weight: 700; }
+  .ligne-compacte .pct-neutre { color: var(--os); font-weight: 700; }
+
   nav.bottom-nav {
     position: fixed; bottom: 14px; left: 14px; right: 14px;
     display: flex; gap: 4px;
-    background: rgba(15,23,42,0.85); backdrop-filter: blur(14px);
-    border: 1px solid var(--sauge);
+    background: var(--carbone);
+    border: 1px solid var(--bordure);
     border-radius: 22px;
     padding: 7px;
-    box-shadow: 0 10px 34px rgba(0,242,254,0.12);
     z-index: 1000;
   }
   nav.bottom-nav button {
@@ -82,126 +207,110 @@
     transition: background 0.2s, color 0.2s;
   }
   nav.bottom-nav button .icone { font-size: 18px; }
-  nav.bottom-nav button.actif { color: #0b132b; background: linear-gradient(135deg, var(--feuille), var(--feuille-clair)); font-weight: 700; }
+  nav.bottom-nav button.actif { color: var(--fond); background: var(--chlorophylle); font-weight: 700; }
 
   h2.titre-section {
     color: #fff; font-size: 21px; margin: 2px 0 14px;
-    font-family: 'Fraunces', serif; font-style: italic; font-weight: 600;
-    text-shadow: 0 0 14px rgba(0,242,254,0.25);
+    font-weight: 700; letter-spacing: -0.3px;
   }
   .carte-bloc {
-    background: var(--panneau); backdrop-filter: blur(12px);
+    background: var(--carbone);
     border-radius: 20px; padding: 18px; margin-bottom: 14px;
-    border: 1px solid var(--sauge);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+    border: 1px solid var(--bordure);
   }
-  label.champ-label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--feuille); text-transform: uppercase; letter-spacing: 0.4px; }
+  label.champ-label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--chlorophylle); text-transform: uppercase; letter-spacing: 0.4px; }
   input[type="text"], select, textarea {
-    width: 100%; padding: 11px 13px; border: 1px solid var(--sauge); border-radius: 12px;
-    font-size: 15px; margin-bottom: 12px; font-family: inherit; background: rgba(11,19,43,0.6);
-    color: var(--texte);
+    width: 100%; padding: 11px 13px; border: 1px solid var(--bordure); border-radius: 12px;
+    font-size: 15px; margin-bottom: 12px; font-family: inherit; background: var(--fond);
+    color: var(--os);
   }
-  input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: var(--feuille); background: rgba(11,19,43,0.9); }
+  input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: var(--chlorophylle); background: var(--fond); }
   textarea { resize: vertical; min-height: 60px; }
   button.btn {
-    background: linear-gradient(135deg, var(--feuille), var(--feuille-clair)); color: #04121a; border: none; border-radius: 14px;
+    background: var(--chlorophylle); color: var(--fond); border: none; border-radius: 14px;
     padding: 13px 18px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%;
-    letter-spacing: 0.1px; box-shadow: 0 4px 20px rgba(0,242,254,0.25);
+    letter-spacing: 0.1px;
   }
-  button.btn.secondaire { background: linear-gradient(135deg, var(--amber), #f59e0b); color: #2a1c02; box-shadow: 0 4px 20px rgba(251,191,36,0.2); }
-  button.btn.contour { background: transparent; color: var(--feuille); border: 1.5px solid var(--feuille); box-shadow: none; }
-  button.btn:disabled { background: var(--sauge); color: var(--texte-doux); box-shadow: none; }
+  button.btn.secondaire { background: var(--argile); color: var(--fond); }
+  button.btn.contour { background: transparent; color: var(--chlorophylle); border: 1.5px solid var(--chlorophylle); }
+  button.btn:disabled { background: var(--bordure); color: var(--gris-doux); }
   .disclaimer {
-    background: rgba(251,191,36,0.08); color: var(--amber); font-size: 12.5px;
+    background: rgba(193,122,78,0.08); color: var(--argile); font-size: 12.5px;
     padding: 11px 13px; border-radius: 14px; margin-bottom: 14px; line-height: 1.4;
-    border: 1px solid rgba(251,191,36,0.25);
+    border: 1px solid rgba(193,122,78,0.25);
   }
-  .badge-pct {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: 40px; height: 26px; padding: 0 9px;
-    border-radius: 13px 13px 13px 3px;
-    font-family: 'Inter'; font-size: 12.5px; font-weight: 700;
-    color: #04121a;
-  }
-
   .resultat-culture {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 11px 0; border-bottom: 1px solid var(--sauge);
+    padding: 11px 0; border-bottom: 1px solid var(--bordure);
   }
   .resultat-culture:last-child { border-bottom: none; }
-  .resultat-culture .nom { font-weight: 600; color: var(--texte); }
-  .loader { text-align: center; padding: 22px; color: var(--texte-doux); font-size: 14px; }
+  .resultat-culture .nom { font-weight: 600; color: var(--os); }
+  .loader { text-align: center; padding: 22px; color: var(--gris-doux); font-size: 14px; }
 
-  #carte-leaflet { height: 340px; border-radius: 18px; margin-bottom: 12px; border: 1px solid var(--sauge); filter: saturate(1.1) brightness(0.95); }
+  #carte-leaflet { height: 340px; border-radius: 18px; margin-bottom: 12px; border: 1px solid var(--bordure); }
   .surface-affichee {
-    text-align: center; font-size: 17px; font-weight: 700; color: #04121a;
-    font-family: 'Fraunces', serif;
-    padding: 11px; background: linear-gradient(135deg, var(--feuille), var(--feuille-clair)); border-radius: 14px; margin-bottom: 10px;
+    text-align: center; font-size: 17px; font-weight: 700; color: var(--fond);
+    padding: 11px; background: var(--chlorophylle); border-radius: 14px; margin-bottom: 10px;
   }
 
   .terrain-card { position: relative; }
-  .terrain-card h3 { margin: 0 0 3px; color: #fff; font-family: 'Fraunces', serif; font-weight: 600; font-size: 17px; }
-  .terrain-card .meta { font-size: 12.5px; color: var(--texte-doux); margin-bottom: 10px; }
-  .terrain-card .notes { font-size: 13.5px; margin-bottom: 10px; color: var(--texte); }
+  .terrain-card h3 { margin: 0 0 3px; color: #fff; font-weight: 700; font-size: 17px; }
+  .terrain-card .meta { font-size: 12.5px; color: var(--gris-doux); margin-bottom: 10px; }
+  .terrain-card .notes { font-size: 13.5px; margin-bottom: 10px; color: var(--os); }
   .terrain-card .supprimer {
     position: absolute; top: 16px; right: 16px; background: none; border: none;
-    color: var(--terracotta); font-size: 12.5px; cursor: pointer;
+    color: var(--brique); font-size: 12.5px; cursor: pointer;
   }
 
-  .cert-section { border-top: 1px solid var(--sauge); margin-top: 14px; padding-top: 14px; }
+  .cert-section { border-top: 1px solid var(--bordure); margin-top: 14px; padding-top: 14px; }
   .cert-titre {
-    font-weight: 600; color: var(--feuille); margin-bottom: 12px;
-    font-family: 'Fraunces', serif; font-style: italic; font-size: 15px;
+    font-weight: 700; color: var(--chlorophylle); margin-bottom: 12px; font-size: 15px;
   }
-  .cert-tabs { display: flex; gap: 16px; margin-bottom: 12px; border-bottom: 1px solid var(--sauge); }
+  .cert-tabs { display: flex; gap: 16px; margin-bottom: 12px; border-bottom: 1px solid var(--bordure); }
   .cert-tab {
     padding: 4px 0 8px; border: none; border-bottom: 2px solid transparent; border-radius: 0;
-    background: transparent; color: var(--texte-doux); font-size: 12.5px; font-weight: 600; cursor: pointer;
+    background: transparent; color: var(--gris-doux); font-size: 12.5px; font-weight: 600; cursor: pointer;
   }
-  .cert-tab.actif { color: var(--feuille); border-bottom-color: var(--feuille); }
-  .cert-progress-wrap { background: var(--sauge); border-radius: 8px; height: 6px; overflow: hidden; margin-bottom: 9px; }
-  .cert-progress-bar { height: 100%; background: linear-gradient(90deg, var(--feuille), var(--feuille-clair)); transition: width .3s; }
-  .cert-progress-label { font-size: 11.5px; color: var(--texte-doux); margin-bottom: 9px; }
+  .cert-tab.actif { color: var(--chlorophylle); border-bottom-color: var(--chlorophylle); }
   .cert-checklist { list-style: none; padding: 0; margin: 0; }
-  .cert-checklist li { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.06); color: var(--texte); }
+  .cert-checklist li { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.06); color: var(--os); }
   .cert-checklist li:last-child { border-bottom: none; }
-  .cert-checklist input[type="checkbox"] { margin-top: 2px; accent-color: var(--feuille); flex-shrink: 0; }
-  .cert-organisme { margin-top: 9px; font-size: 11.5px; background: rgba(0,242,254,0.08); padding: 8px 10px; border-radius: 10px; color: var(--feuille); }
-  .cert-organisme a { color: var(--feuille); font-weight: 600; }
+  .cert-checklist input[type="checkbox"] { margin-top: 2px; accent-color: var(--chlorophylle); flex-shrink: 0; }
+  .cert-organisme { margin-top: 9px; font-size: 11.5px; background: rgba(94,168,90,0.08); padding: 8px 10px; border-radius: 10px; color: var(--chlorophylle); }
+  .cert-organisme a { color: var(--chlorophylle); font-weight: 600; }
 
-  .vide { text-align: center; color: var(--texte-doux); padding: 32px 10px; font-size: 14px; }
+  .vide { text-align: center; color: var(--gris-doux); padding: 32px 10px; font-size: 14px; }
 
   .plan-carte {
-    background: var(--panneau); backdrop-filter: blur(12px); border: 1.5px solid var(--sauge); border-radius: 20px;
+    background: var(--carbone); border: 1.5px solid var(--bordure); border-radius: 20px;
     padding: 20px; margin-bottom: 16px; position: relative;
   }
-  .plan-carte.premium { border-color: var(--feuille); box-shadow: 0 0 30px rgba(0,242,254,0.15); }
-  .plan-carte.max {
-    border-color: var(--amber); box-shadow: 0 0 30px rgba(251,191,36,0.18);
-    background: linear-gradient(180deg, rgba(251,191,36,0.06) 0%, var(--panneau) 60%);
-  }
+  .plan-carte.premium { border-color: var(--chlorophylle); }
+  .plan-carte.max { border-color: var(--argile); }
   .plan-badge {
-    position: absolute; top: -11px; right: 18px; background: var(--terracotta);
-    color: #2a0810; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 12px;
-    text-transform: uppercase; letter-spacing: .4px;
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid var(--chlorophylle); color: var(--chlorophylle); background: transparent;
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 8px;
+    text-transform: uppercase; letter-spacing: .3px; margin-bottom: 8px;
+    transition: opacity var(--duree-micro) var(--easing-standard);
   }
-  .plan-badge.badge-max { background: var(--amber); color: #2a1c02; }
-  .plan-nom { font-family: 'Fraunces', serif; font-style: italic; font-weight: 600; font-size: 19px; color: #fff; margin: 0 0 2px; }
-  .plan-prix { font-size: 26px; font-weight: 700; color: #fff; margin: 6px 0 14px; }
-  .plan-prix span { font-size: 13px; font-weight: 500; color: var(--texte-doux); }
+  .plan-badge.badge-max { border-color: var(--argile); color: var(--argile); }
+  .plan-nom { font-weight: 700; font-size: 19px; color: #fff; margin: 0 0 2px; }
+  .plan-prix { font-size: 26px; font-weight: 800; color: #fff; margin: 6px 0 14px; }
+  .plan-prix span { font-size: 13px; font-weight: 500; color: var(--gris-doux); }
   .plan-liste { list-style: none; padding: 0; margin: 0 0 16px; }
-  .plan-liste li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13.5px; color: var(--texte); }
-  .plan-liste .coche { color: var(--feuille-clair); font-weight: 700; flex-shrink: 0; }
-  .plan-liste .verrou { color: var(--texte-doux); flex-shrink: 0; }
-  .plan-liste li.non-inclus { color: var(--texte-doux); }
+  .plan-liste li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13.5px; color: var(--os); }
+  .plan-liste .coche { color: var(--chlorophylle); font-weight: 700; flex-shrink: 0; }
+  .plan-liste .verrou { color: var(--gris-doux); flex-shrink: 0; }
+  .plan-liste li.non-inclus { color: var(--gris-doux); }
   .legende-plans {
-    text-align: center; font-size: 11.5px; color: var(--texte-doux);
+    text-align: center; font-size: 11.5px; color: var(--gris-doux);
     margin: 0 0 14px; letter-spacing: .2px;
   }
-  .plan-liste li.ligne-dev { flex-wrap: wrap; justify-content: space-between; color: var(--texte-doux); row-gap: 6px; }
+  .plan-liste li.ligne-dev { flex-wrap: wrap; justify-content: space-between; color: var(--gris-doux); row-gap: 6px; }
   .plan-liste li.ligne-dev > span:first-child { flex: 1 1 auto; }
   .badge-roadmap {
-    display: inline-flex; align-items: center; background: rgba(251,191,36,0.15); color: var(--amber);
+    display: inline-flex; align-items: center; background: rgba(193,122,78,0.15); color: var(--argile);
     font-size: 10px; font-weight: 700; padding: 5px 10px; border-radius: 8px;
     text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; flex-shrink: 0;
     border: none; cursor: pointer; font-family: inherit; min-height: 30px;
@@ -209,59 +318,59 @@
   .badge-roadmap:active { opacity: .7; }
   .plan-repere-dev {
     display: flex; align-items: center; gap: 5px;
-    font-size: 11px; font-weight: 600; color: var(--amber); margin: -6px 0 12px;
+    font-size: 11px; font-weight: 600; color: var(--argile); margin: -6px 0 12px;
   }
 
   /* -------- FAQ accordéon -------- */
-  .faq-item { border-bottom: 1px solid var(--sauge); }
+  .faq-item { border-bottom: 1px solid var(--bordure); }
   .faq-item:last-child { border-bottom: none; }
   .faq-question {
     width: 100%; min-height: 44px; background: none; border: none; font-family: inherit;
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 12px 2px; font-size: 13.5px; font-weight: 600; color: var(--texte);
+    padding: 12px 2px; font-size: 13.5px; font-weight: 600; color: var(--os);
     text-align: left; cursor: pointer;
   }
-  .faq-chevron { color: var(--feuille); flex-shrink: 0; transition: transform .25s; font-size: 13px; }
+  .faq-chevron { color: var(--chlorophylle); flex-shrink: 0; transition: transform .25s; font-size: 13px; }
   .faq-item.ouvert .faq-chevron { transform: rotate(180deg); }
   .faq-reponse { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
-  .faq-reponse p { margin: 0 2px 14px; font-size: 13px; line-height: 1.55; color: var(--texte-doux); }
+  .faq-reponse p { margin: 0 2px 14px; font-size: 13px; line-height: 1.55; color: var(--gris-doux); }
   .faq-item.ouvert .faq-reponse { max-height: 400px; }
-  .faq-item.cible .faq-question { color: var(--amber); }
+  .faq-item.cible .faq-question { color: var(--argile); }
 
   .badge-pro-inline {
-    display: inline-flex; align-items: center; gap: 3px; background: rgba(0,242,254,0.12);
-    color: var(--feuille); font-size: 10.5px; font-weight: 700; padding: 2px 8px;
+    display: inline-flex; align-items: center; gap: 3px; background: rgba(94,168,90,0.12);
+    color: var(--chlorophylle); font-size: 10.5px; font-weight: 700; padding: 2px 8px;
     border-radius: 8px; text-transform: uppercase; letter-spacing: .3px; margin-left: 6px;
   }
-  .badge-pro-inline.badge-max-inline { background: rgba(251,191,36,0.14); color: var(--amber); }
+  .badge-pro-inline.badge-max-inline { background: rgba(193,122,78,0.14); color: var(--argile); }
   .fonction-verrouillee {
-    background: rgba(255,255,255,0.03); border: 1px dashed var(--sauge); border-radius: 12px;
+    background: rgba(255,255,255,0.03); border: 1px dashed var(--bordure); border-radius: 12px;
     padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
   }
-  .fonction-verrouillee .fv-texte { font-size: 13px; color: var(--texte-doux); }
-  .fonction-verrouillee .fv-texte strong { color: var(--texte); display: flex; align-items: center; gap: 6px; font-size: 13.5px; margin-bottom: 2px; }
+  .fonction-verrouillee .fv-texte { font-size: 13px; color: var(--gris-doux); }
+  .fonction-verrouillee .fv-texte strong { color: var(--os); display: flex; align-items: center; gap: 6px; font-size: 13.5px; margin-bottom: 2px; }
   .fonction-verrouillee button { width: auto; padding: 8px 14px; font-size: 12px; margin: 0; white-space: nowrap; }
 
-  .statut-compte { text-align: center; font-size: 12.5px; color: var(--texte-doux); margin-bottom: 14px; }
-  .statut-compte strong { color: var(--feuille); }
+  .statut-compte { text-align: center; font-size: 12.5px; color: var(--gris-doux); margin-bottom: 14px; }
+  .statut-compte strong { color: var(--chlorophylle); }
 
   .piliers-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
   .pilier-chip {
-    background: var(--panneau); border: 1px solid var(--sauge); border-radius: 12px;
-    padding: 10px; text-align: center; font-size: 10.5px; color: var(--texte-doux);
+    background: var(--carbone); border: 1px solid var(--bordure); border-radius: 12px;
+    padding: 10px; text-align: center; font-size: 10.5px; color: var(--gris-doux);
   }
   .pilier-chip .pilier-icone { font-size: 18px; display: block; margin-bottom: 4px; }
-  .pilier-chip strong { display: block; color: var(--texte); font-size: 11.5px; margin-bottom: 2px; }
+  .pilier-chip strong { display: block; color: var(--os); font-size: 11.5px; margin-bottom: 2px; }
 
   .apercu-bientot {
-    border: 1px dashed var(--amber); border-radius: 14px; padding: 16px; text-align: center;
-    background: rgba(251,191,36,0.05);
+    border: 1px dashed var(--argile); border-radius: 14px; padding: 16px; text-align: center;
+    background: rgba(193,122,78,0.05);
   }
   .apercu-bientot .apercu-icone { font-size: 30px; margin-bottom: 8px; }
   .apercu-bientot .apercu-titre { font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px; }
-  .apercu-bientot .apercu-texte { font-size: 12px; color: var(--texte-doux); line-height: 1.4; }
+  .apercu-bientot .apercu-texte { font-size: 12px; color: var(--gris-doux); line-height: 1.4; }
   .badge-bientot {
-    display: inline-block; background: rgba(251,191,36,0.15); color: var(--amber);
+    display: inline-block; background: rgba(193,122,78,0.15); color: var(--argile);
     font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 8px; margin-top: 8px;
     text-transform: uppercase; letter-spacing: .3px;
   }
@@ -269,13 +378,13 @@
   /* -------- Onboarding paginé -------- */
   #onboarding-overlay {
     position: fixed; inset: 0; z-index: 2000;
-    background: rgba(30,43,32,0.94);
+    background: rgba(13,13,11,0.94);
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
   }
   #onboarding-overlay.hidden { display: none; }
   .onboarding-modal {
-    background: var(--rosee); border-radius: 26px; width: 100%; max-width: 420px;
+    background: var(--carbone); border-radius: 26px; width: 100%; max-width: 420px;
     height: min(600px, 84vh); display: flex; flex-direction: column; overflow: hidden;
     box-shadow: 0 24px 60px rgba(0,0,0,0.4);
   }
@@ -293,28 +402,41 @@
     width: 104px; height: 104px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 46px; margin-bottom: 22px;
-    background: var(--sauge);
+    background: rgba(94,168,90,0.12);
   }
-  .onboarding-page:nth-child(1) .onboarding-illustration { background: var(--feuille-clair); }
-  .onboarding-page:nth-child(3) .onboarding-illustration { background: var(--terre-clair); }
-  .onboarding-page:nth-child(5) .onboarding-illustration { background: linear-gradient(135deg, var(--amber), var(--terre)); }
   .onboarding-titre {
-    font-family: 'Fraunces', serif; font-style: italic; font-weight: 600;
-    font-size: 22px; color: var(--foret); margin: 0 0 12px;
+    font-weight: 800; letter-spacing: -0.4px;
+    font-size: 22px; color: #fff; margin: 0 0 12px;
   }
-  .onboarding-texte { font-size: 14px; line-height: 1.55; color: var(--texte-doux); max-width: 300px; }
+  .onboarding-texte { font-size: 14px; line-height: 1.55; color: var(--gris-doux); max-width: 300px; }
+  .onboarding-reponses { display: flex; flex-direction: column; gap: 9px; width: 100%; max-width: 300px; margin-top: 4px; }
+  .onboarding-reponse {
+    background: rgba(255,255,255,0.04); border: 1.5px solid var(--bordure); border-radius: 14px;
+    padding: 13px 16px; font-size: 13.5px; font-family: inherit; color: var(--os);
+    text-align: left; cursor: pointer; font-weight: 600;
+    transition: border-color .2s, background .2s;
+  }
+  .onboarding-reponse.selectionnee {
+    border-color: var(--chlorophylle); background: rgba(94,168,90,0.14); color: #fff;
+    animation: reponse-confirmee 220ms var(--easing-confirmation);
+  }
+  @keyframes reponse-confirmee {
+    0%   { transform: scale(1);     box-shadow: 0 0 0 0 rgba(94,168,90,0); }
+    45%  { transform: scale(1.035); box-shadow: 0 0 0 6px rgba(94,168,90,0.18); }
+    100% { transform: scale(1);     box-shadow: 0 0 0 0 rgba(94,168,90,0); }
+  }
   .onboarding-footer {
     padding: 18px 24px max(18px, env(safe-area-inset-bottom));
-    border-top: 1px solid var(--sauge); background: #fff;
+    border-top: 1px solid var(--bordure); background: var(--carbone);
   }
   .onboarding-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 14px; }
-  .onboarding-dot { width: 7px; height: 7px; border-radius: 4px; background: var(--sauge); transition: all .25s; }
-  .onboarding-dot.actif { width: 22px; background: var(--foret); }
+  .onboarding-dot { width: 7px; height: 7px; border-radius: 4px; background: var(--bordure); transition: all .25s; }
+  .onboarding-dot.actif { width: 22px; background: var(--chlorophylle); }
   .onboarding-checkbox-row {
-    display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--texte-doux);
+    display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--gris-doux);
     margin-bottom: 12px; justify-content: center;
   }
-  .onboarding-checkbox-row input { accent-color: var(--feuille); width: 16px; height: 16px; margin: 0; }
+  .onboarding-checkbox-row input { accent-color: var(--chlorophylle); width: 16px; height: 16px; margin: 0; }
 </style>
 </head>
 <body>
@@ -353,11 +475,35 @@
         <p class="onboarding-texte">Débloque un rapport technique approfondi, un score de risques et une estimation de rentabilité, avec export PDF pour tes démarches bancaires.</p>
       </div>
 
+      <div class="onboarding-page">
+        <div class="onboarding-illustration">🌾</div>
+        <h2 class="onboarding-titre">Où en es-tu avec tes terrains ?</h2>
+        <div class="onboarding-reponses" data-question="etat">
+          <button class="onboarding-reponse" data-valeur="neo">Je n'ai pas encore de terrain</button>
+          <button class="onboarding-reponse" data-valeur="structuration">J'ai un terrain, je veux le sécuriser</button>
+          <button class="onboarding-reponse" data-valeur="qualite">Je veux structurer une certification</button>
+          <button class="onboarding-reponse" data-valeur="multi-parcelles">Je gère déjà plusieurs parcelles</button>
+        </div>
+      </div>
+
+      <div class="onboarding-page">
+        <div class="onboarding-illustration">🎯</div>
+        <h2 class="onboarding-titre">Quel est ton objectif principal avec AgriIA ?</h2>
+        <div class="onboarding-reponses" data-question="objectif">
+          <button class="onboarding-reponse" data-valeur="neo">Cultiver ce terrain efficacement</button>
+          <button class="onboarding-reponse" data-valeur="structuration">Sécuriser mon terrain et préparer un financement</button>
+          <button class="onboarding-reponse" data-valeur="qualite">Viser une certification</button>
+          <button class="onboarding-reponse" data-valeur="multi-parcelles">Piloter plusieurs exploitations</button>
+        </div>
+      </div>
+
     </div>
 
     <div class="onboarding-footer">
       <div class="onboarding-dots" id="onboarding-dots">
         <span class="onboarding-dot actif"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
         <span class="onboarding-dot"></span>
         <span class="onboarding-dot"></span>
         <span class="onboarding-dot"></span>
@@ -386,6 +532,12 @@
       📲 Installer l'app
     </button>
   </header>
+
+  <div id="bandeau-identite" class="bandeau-identite">
+    <span class="bandeau-icone" id="bandeau-icone"></span>
+    <span class="bandeau-texte" id="bandeau-texte"></span>
+    <button class="bandeau-modifier" id="btn-modifier-objectif">Modifier</button>
+  </div>
 
   <!-- ============ VUE DIAGNOSTIC ============ -->
   <section id="vue-diagnostic" class="vue active">
@@ -450,7 +602,7 @@
 
     <div class="carte-bloc">
       <label class="champ-label">📁 Importer un fichier géographique</label>
-      <p style="font-size:12.5px;color:var(--texte-doux);margin-top:0;">Importe un fichier de géomètre ou extrait cadastral au format GeoJSON ou KML (ex. export Google Earth / My Maps) pour délimiter ta parcelle instantanément.</p>
+      <p style="font-size:12.5px;color:var(--gris-doux);margin-top:0;">Importe un fichier de géomètre ou extrait cadastral au format GeoJSON ou KML (ex. export Google Earth / My Maps) pour délimiter ta parcelle instantanément.</p>
       <input type="file" id="input-file-geo" accept=".geojson,.json,.kml" style="margin-bottom:0;font-size:13px;padding:8px;">
     </div>
 
@@ -459,6 +611,12 @@
       <div id="carte-leaflet"></div>
       <div class="surface-affichee" id="surface-affichee">Aucune surface sélectionnée</div>
       <button class="btn secondaire" id="btn-surface-vers-carnet" disabled>Envoyer cette surface vers le carnet</button>
+
+      <div class="teaser-roi-carte" id="teaser-roi-carte" style="display:none;">
+        <div class="tr-titre">📈 Estime le ROI de chaque parcelle</div>
+        <div class="tr-texte">Pilote plusieurs exploitations en un coup d'œil : rendement et marge estimés par parcelle, dès que tu passes en Max.</div>
+        <button class="btn secondaire" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Passer en Max</button>
+      </div>
     </div>
   </section>
 
@@ -489,29 +647,36 @@
       <button class="btn" id="btn-ajouter-terrain">Ajouter au carnet</button>
     </div>
 
+    <div class="compteur-terrains-gestionnaire" id="compteur-terrains-gestionnaire" style="display:none;">
+      <span class="ctg-label"><strong id="ctg-valeur">0/2</strong> terrains enregistrés</span>
+      <button class="btn secondaire" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Passer en Max</button>
+    </div>
+
     <div id="liste-terrains"></div>
 
     <div class="carte-bloc">
       <label class="champ-label">Avec l'Espace Premium</label>
-      <div class="fonction-verrouillee">
-        <div class="fv-texte"><strong>📄 Rapport technique approfondi <span class="badge-pro-inline">Premium</span></strong>Analyse détaillée du climat, du sol et des cultures adaptées</div>
-        <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
-      </div>
-      <div class="fonction-verrouillee">
-        <div class="fv-texte"><strong>⚠️ Score de risques environnementaux <span class="badge-pro-inline">Premium</span></strong>Sécheresse, érosion, appauvrissement du sol</div>
-        <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
-      </div>
-      <div class="fonction-verrouillee">
-        <div class="fv-texte"><strong>📑 Rapport PDF officiel <span class="badge-pro-inline">Premium</span></strong>Document téléchargeable pour banque ou investisseur</div>
-        <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
-      </div>
-      <div class="fonction-verrouillee">
-        <div class="fv-texte"><strong>💰 Rendement &amp; CA projeté <span class="badge-pro-inline badge-max-inline">Max</span></strong>Estimation financière indicative par culture</div>
-        <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
-      </div>
-      <div class="fonction-verrouillee">
-        <div class="fv-texte"><strong>🔬 IA Botaniste &amp; 🛰️ NDVI <span class="badge-pro-inline badge-max-inline">Max</span></strong>Diagnostic maladies par photo, imagerie satellite</div>
-        <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+      <div id="liste-fonctions-verrouillees">
+        <div class="fonction-verrouillee" id="fv-rapport-technique">
+          <div class="fv-texte"><strong>📄 Rapport technique approfondi <span class="badge-pro-inline">Premium</span></strong>Analyse détaillée du climat, du sol et des cultures adaptées</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+        </div>
+        <div class="fonction-verrouillee" id="fv-score-risques">
+          <div class="fv-texte"><strong>⚠️ Score de risques environnementaux <span class="badge-pro-inline">Premium</span></strong>Sécheresse, érosion, appauvrissement du sol</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+        </div>
+        <div class="fonction-verrouillee" id="fv-rapport-pdf">
+          <div class="fv-texte"><strong>📑 Rapport PDF détaillé <span class="badge-pro-inline">Premium</span></strong>Document téléchargeable pour banque ou investisseur</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+        </div>
+        <div class="fonction-verrouillee" id="fv-ca-projete">
+          <div class="fv-texte"><strong>💰 Rendement &amp; CA projeté <span class="badge-pro-inline badge-max-inline">Max</span></strong>Estimation financière indicative par culture</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+        </div>
+        <div class="fonction-verrouillee" id="fv-ia-ndvi">
+          <div class="fv-texte"><strong>🔬 IA Botaniste &amp; 🛰️ NDVI <span class="badge-pro-inline badge-max-inline">Max</span></strong>Diagnostic maladies par photo, imagerie satellite</div>
+          <button class="btn contour" onclick="document.querySelector('[data-vue=\'vue-abonnement\']').click()">Débloquer</button>
+        </div>
       </div>
     </div>
   </section>
@@ -539,18 +704,18 @@
         <li><span class="coche">✓</span> Carnet de terrains — jusqu'à 2 terrains</li>
         <li><span class="coche">✓</span> Suivi de certification (Bio, HVE, USDA)</li>
         <li class="non-inclus"><span class="verrou">🔒</span> Calendrier agro-météo &amp; alertes</li>
-        <li class="non-inclus"><span class="verrou">🔒</span> Rapports PDF officiels</li>
+        <li class="non-inclus"><span class="verrou">🔒</span> Rapports PDF détaillés</li>
         <li class="non-inclus"><span class="verrou">🔒</span> IA Botaniste &amp; imagerie satellite</li>
       </ul>
     </div>
 
     <div class="plan-carte premium">
-      <div class="plan-badge">Recommandé</div>
+      <div class="plan-badge" id="badge-recommande-premium">Recommandé</div>
       <div class="plan-nom">Premium</div>
       <div class="plan-prix">19€ <span>/ mois</span></div>
       <ul class="plan-liste">
         <li><span class="coche">✓</span> Tout le plan Standard</li>
-        <li><span class="coche">✓</span> Terrains illimités dans ton carnet (stockage local)</li>
+        <li><span class="coche">✓</span> Terrains illimités</li>
         <li><span class="coche">✓</span> Calendrier météo à 7 jours</li>
         <li><span class="coche">✓</span> Score de risques environnementaux détaillé</li>
         <li><span class="coche">✓</span> Rapport technique détaillé du terrain</li>
@@ -564,7 +729,7 @@
     </div>
 
     <div class="plan-carte max">
-      <div class="plan-badge badge-max">Expert</div>
+      <div class="plan-badge badge-max" id="badge-etiquette-max">Expert</div>
       <div class="plan-nom">Max</div>
       <div class="plan-prix">39€ <span>/ mois</span></div>
       <div class="plan-repere-dev">🛠️ 2 fonctionnalités en cours de développement</div>
@@ -679,6 +844,8 @@ function majAffichageAbonnement() {
   btnMax.disabled = niveau === 'max';
 
   btnDesactiver.style.display = niveau !== 'standard' ? 'block' : 'none';
+
+  appliquerHabillageAbonnement(profilActif());
 }
 
 function activerNiveau(niveau) {
@@ -752,6 +919,26 @@ function ouvrirFaqDepuisBadge(idFaq) {
     btn.textContent = pageActuelle === nbPages - 1 ? 'Commencer' : 'Suivant';
   }
 
+  function terminerOnboarding() {
+    if (document.getElementById('onboarding-ne-plus-afficher').checked) {
+      localStorage.setItem('agriia_onboarding_masque', '1');
+    }
+    overlay.classList.add('hidden');
+    // Le profil a pu être capturé pendant cette session : on réapplique tout de suite,
+    // sans attendre un rechargement de page.
+    if (typeof appliquerProfil === 'function') appliquerProfil();
+  }
+
+  function avancerOuTerminer() {
+    if (pageActuelle < nbPages - 1) {
+      pageActuelle++;
+      track.scrollTo({ left: track.clientWidth * pageActuelle, behavior: 'smooth' });
+      majUI();
+    } else {
+      terminerOnboarding();
+    }
+  }
+
   track.addEventListener('scroll', () => {
     clearTimeout(track._scrollTimeout);
     track._scrollTimeout = setTimeout(() => {
@@ -760,17 +947,17 @@ function ouvrirFaqDepuisBadge(idFaq) {
     }, 80);
   });
 
-  btn.addEventListener('click', () => {
-    if (pageActuelle < nbPages - 1) {
-      pageActuelle++;
-      track.scrollTo({ left: track.clientWidth * pageActuelle, behavior: 'smooth' });
-      majUI();
-    } else {
-      if (document.getElementById('onboarding-ne-plus-afficher').checked) {
-        localStorage.setItem('agriia_onboarding_masque', '1');
-      }
-      overlay.classList.add('hidden');
-    }
+  btn.addEventListener('click', avancerOuTerminer);
+
+  // Écrans de capture de profil : tap sur une réponse → sélection visuelle + stockage + avance auto.
+  document.querySelectorAll('.onboarding-reponse').forEach(reponse => {
+    reponse.addEventListener('click', () => {
+      const groupe = reponse.closest('.onboarding-reponses');
+      if (groupe) groupe.querySelectorAll('.onboarding-reponse').forEach(r => r.classList.remove('selectionnee'));
+      reponse.classList.add('selectionnee');
+      localStorage.setItem('agriia_profil', reponse.dataset.valeur);
+      setTimeout(avancerOuTerminer, 220);
+    });
   });
 })();
 
@@ -931,21 +1118,68 @@ function calculerScores(climat, sol, fertilite) {
   }).sort((a, b) => b.score - a.score);
 }
 
+/* ============================================================
+   ANNEAU DE CROISSANCE — remplissage + compteur synchronisés
+   ============================================================ */
+const easeCroissance = t => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+const easeMiseAJour = t => t * (2 - t);
+
+function animerAnneau(elAnneau, elCompteur, depart, cible, dureeMs, easing, formatter) {
+  if (!elAnneau) return;
+  const format = formatter || (v => Math.round(v) + '%');
+  const t0 = performance.now();
+  function frame(now) {
+    const t = Math.min(1, (now - t0) / dureeMs);
+    const val = depart + (cible - depart) * easing(t);
+    elAnneau.style.setProperty('--pct', val);
+    if (elCompteur) elCompteur.textContent = format(val);
+    if (t < 1) requestAnimationFrame(frame);
+    else {
+      elAnneau.style.transform = 'scale(1.015)';
+      setTimeout(() => { elAnneau.style.transform = 'scale(1)'; }, 120);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
 function couleurScore(score) {
-  if (score >= 70) return '#22c55e';
-  if (score >= 40) return '#fbbf24';
-  return '#fb7185';
+  return score >= 70 ? 'chlorophylle' : 'neutre';
 }
 
 function afficherResultats(resultats) {
   const zone = document.getElementById('resultats-diagnostic');
-  const html = resultats.slice(0, 8).map(r => `
-    <div class="resultat-culture">
-      <span class="nom">${r.nom}</span>
-      <span class="badge-pct" style="background:${couleurScore(r.score)}">${r.score}%</span>
+  const top8 = resultats.slice(0, 8);
+  const hero = top8[0];
+  const reste = top8.slice(1);
+
+  const heroHtml = hero ? `
+    <div class="hero-resultat">
+      <div class="anneau-progression anneau-hero mise-en-avant" id="anneau-hero-diagnostic">
+        <div class="anneau-contenu"><span class="compteur-anneau" id="compteur-hero-diagnostic">0%</span></div>
+      </div>
+      <div>
+        <div class="hero-nom">${hero.nom}</div>
+        <div class="hero-legende">Culture la mieux adaptée</div>
+      </div>
+    </div>
+  ` : '';
+
+  const resteHtml = reste.map(r => `
+    <div class="ligne-compacte">
+      <span>${r.nom}</span>
+      <span class="${couleurScore(r.score) === 'chlorophylle' ? 'pct-haut' : 'pct-neutre'}">${r.score}%</span>
     </div>
   `).join('');
-  zone.innerHTML = `<div class="carte-bloc"><h3 style="margin-top:0;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">Cultures les plus adaptées</h3>${html}</div>`;
+
+  zone.innerHTML = `<div class="carte-bloc"><h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">Cultures les plus adaptées</h3>${heroHtml}${resteHtml}</div>`;
+
+  if (hero) {
+    animerAnneau(
+      document.getElementById('anneau-hero-diagnostic'),
+      document.getElementById('compteur-hero-diagnostic'),
+      0, hero.score, 1200, easeCroissance
+    );
+  }
 }
 
 /* ============================================================
@@ -1009,17 +1243,34 @@ function calculerRentabilite(resultats) {
   });
 }
 
-function couleurRisque(niveau) {
-  if (niveau === 'Faible') return '#22c55e';
-  if (niveau === 'Modéré') return '#fbbf24';
-  return '#fb7185';
+function classeRisque(niveau) {
+  if (niveau === 'Faible') return 'faible';
+  if (niveau === 'Modéré') return 'modere';
+  return 'eleve';
 }
 
 function afficherBlocPremiumDiagnostic() {
   const zone = document.getElementById('bloc-premium-diagnostic');
   if (!dernierDiagnostic) { zone.innerHTML = ''; return; }
+  const profil = profilActif();
 
   if (!estPremium()) {
+    // Profil "famille" : le terrain financier (risques + PDF banque) est mis en avant avec un CTA direct.
+    if (profil === 'famille') {
+      zone.innerHTML = `
+        <div class="carte-bloc">
+          <label class="champ-label">Espace Premium</label>
+          <div class="fonction-verrouillee">
+            <div class="fv-texte"><strong>⚠️ Score de risques + 📑 Rapport PDF <span class="badge-pro-inline">Premium</span></strong>Le document utile pour préparer un dossier de financement</div>
+            <button class="btn contour" onclick="document.querySelector('[data-vue=\\'vue-abonnement\\']').click()">Débloquer Premium</button>
+          </div>
+          <div class="fonction-verrouillee">
+            <div class="fv-texte"><strong>🔬 IA Botaniste + 🛰️ NDVI + 💰 Projection CA <span class="badge-pro-inline badge-max-inline">Max</span></strong>Diagnostic maladies, imagerie satellite, rendement financier</div>
+            <button class="btn contour" onclick="document.querySelector('[data-vue=\\'vue-abonnement\\']').click()">Débloquer</button>
+          </div>
+        </div>`;
+      return;
+    }
     zone.innerHTML = `
       <div class="carte-bloc">
         <label class="champ-label">Espace Premium</label>
@@ -1038,46 +1289,56 @@ function afficherBlocPremiumDiagnostic() {
   const { climat, sol, resultats, histFertilite, histCultive } = dernierDiagnostic;
   const risques = calculerRisques(climat, sol, histFertilite, histCultive);
 
-  let html = `
+  const blocRapportTechnique = `
     <div class="carte-bloc">
-      <h3 style="margin-top:0;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">📄 Rapport technique</h3>
-      <p style="font-size:13.5px;line-height:1.5;color:var(--texte);">
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">📄 Rapport technique</h3>
+      <p style="font-size:13.5px;line-height:1.5;color:var(--os);">
         Ce terrain présente un climat moyen de ${climat.tempMoy.toFixed(1)}°C avec ${Math.round(climat.pluieTotale)}mm de précipitations annuelles.
         Le sol est de texture ${sol.texture}, avec un pH mesuré à ${sol.ph.toFixed(1)}.
         ${resultats.length ? `La culture la mieux adaptée identifiée est <strong>${resultats[0].nom}</strong> (${resultats[0].score}% de compatibilité).` : ''}
       </p>
-    </div>
+    </div>`;
 
+  const blocRisques = `
     <div class="carte-bloc">
-      <h3 style="margin-top:0;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">⚠️ Score de risques environnementaux</h3>
-      <div class="resultat-culture"><span class="nom">Sécheresse</span><span class="badge-pct" style="background:${couleurRisque(risques.secheresse)}">${risques.secheresse}</span></div>
-      <div class="resultat-culture"><span class="nom">Érosion</span><span class="badge-pct" style="background:${couleurRisque(risques.erosion)}">${risques.erosion}</span></div>
-      <div class="resultat-culture"><span class="nom">Appauvrissement du sol</span><span class="badge-pct" style="background:${couleurRisque(risques.appauvrissement)}">${risques.appauvrissement}</span></div>
-      <div class="resultat-culture"><span class="nom" style="font-weight:700;">Risque global</span><span class="badge-pct" style="background:${couleurRisque(risques.global)}">${risques.global}</span></div>
-    </div>
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">⚠️ Score de risques environnementaux</h3>
+      <div class="resultat-culture"><span class="nom">Sécheresse</span><span class="badge-risque ${classeRisque(risques.secheresse)}">${risques.secheresse}</span></div>
+      <div class="resultat-culture"><span class="nom">Érosion</span><span class="badge-risque ${classeRisque(risques.erosion)}">${risques.erosion}</span></div>
+      <div class="resultat-culture"><span class="nom">Appauvrissement du sol</span><span class="badge-risque ${classeRisque(risques.appauvrissement)}">${risques.appauvrissement}</span></div>
+      <div class="resultat-culture"><span class="nom" style="font-weight:700;">Risque global</span><span class="badge-risque ${classeRisque(risques.global)}">${risques.global}</span></div>
+    </div>`;
 
+  const blocCalendrier = `
     <div class="carte-bloc">
-      <h3 style="margin-top:0;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">🌦️ Calendrier agro-météorologique (7 jours)</h3>
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">🌦️ Calendrier agro-météorologique (7 jours)</h3>
       <div id="calendrier-meteo"><div class="loader">Chargement des prévisions...</div></div>
     </div>`;
 
+  const blocPdf = `
+    <div class="carte-bloc">
+      <button class="btn" id="btn-generer-pdf">📑 Télécharger le rapport PDF détaillé</button>
+      <div id="statut-pdf" class="status" style="font-size:.8rem;color:var(--gris-doux);margin-top:6px;text-align:center;"></div>
+    </div>
+  `;
+
+  let blocsMax = '';
   if (estMax()) {
     const rentabilite = calculerRentabilite(resultats);
-    html += `
+    blocsMax = `
     <div class="carte-bloc">
-      <h3 style="margin-top:0;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">💰 Estimateur de rendement &amp; projection de chiffre d'affaires</h3>
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">💰 Estimateur de rendement &amp; projection de chiffre d'affaires</h3>
       ${rentabilite.map(r => r.rendement ? `
-        <div style="padding:9px 0;border-bottom:1px solid var(--sauge);">
-          <div style="font-weight:600;font-size:13.5px;color:var(--texte);">${r.nom}</div>
-          <div style="font-size:12px;color:var(--texte-doux);">Rendement indicatif : ${r.rendement} · Revenu brut indicatif : ${r.revenu}${surfaceCourante > 0 ? ` · CA projeté sur ${surfaceCourante.toFixed(2)} ha : ${r.caMin} - ${r.caMax} €/an` : ''}</div>
+        <div style="padding:9px 0;border-bottom:1px solid var(--bordure);">
+          <div style="font-weight:600;font-size:13.5px;color:var(--os);">${r.nom}</div>
+          <div style="font-size:12px;color:var(--gris-doux);">Rendement indicatif : ${r.rendement} · Revenu brut indicatif : ${r.revenu}${surfaceCourante > 0 ? ` · CA projeté sur ${surfaceCourante.toFixed(2)} ha : ${r.caMin} - ${r.caMax} €/an` : ''}</div>
         </div>` : ''
       ).join('')}
-      ${surfaceCourante === 0 ? '<div style="font-size:11.5px;color:var(--texte-doux);margin-top:8px;">Renseigne une surface via l’onglet Carte pour une projection de CA total.</div>' : ''}
+      ${surfaceCourante === 0 ? '<div style="font-size:11.5px;color:var(--gris-doux);margin-top:8px;">Renseigne une surface via l’onglet Carte pour une projection de CA total.</div>' : ''}
       <div class="disclaimer" style="margin-top:10px;">Estimations génériques indicatives, non liées à un marché local en temps réel. À faire valider par un professionnel avant toute décision financière.</div>
     </div>
 
     <div class="carte-bloc">
-      <h3 style="margin-top:0;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">🔬 IA Botaniste</h3>
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">🔬 IA Botaniste</h3>
       <div class="apercu-bientot">
         <div class="apercu-icone">🔬</div>
         <div class="apercu-titre">Diagnostic de maladies par photo</div>
@@ -1087,7 +1348,7 @@ function afficherBlocPremiumDiagnostic() {
     </div>
 
     <div class="carte-bloc">
-      <h3 style="margin-top:0;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">🛰️ Imagerie NDVI satellite</h3>
+      <h3 style="margin-top:0;color:#fff;font-weight:700;font-size:16px;">🛰️ Imagerie NDVI satellite</h3>
       <div class="apercu-bientot">
         <div class="apercu-icone">🛰️</div>
         <div class="apercu-titre">Indice de végétation par satellite</div>
@@ -1096,7 +1357,7 @@ function afficherBlocPremiumDiagnostic() {
       </div>
     </div>`;
   } else {
-    html += `
+    blocsMax = `
     <div class="carte-bloc">
       <div class="fonction-verrouillee">
         <div class="fv-texte"><strong>🔬 IA Botaniste + 🛰️ NDVI + 💰 Projection CA <span class="badge-pro-inline badge-max-inline">Max</span></strong>Diagnostic maladies, imagerie satellite, rendement financier</div>
@@ -1105,12 +1366,10 @@ function afficherBlocPremiumDiagnostic() {
     </div>`;
   }
 
-  html += `
-    <div class="carte-bloc">
-      <button class="btn" id="btn-generer-pdf">📑 Télécharger le rapport PDF officiel</button>
-      <div id="statut-pdf" class="status" style="font-size:.8rem;color:var(--texte-doux);margin-top:6px;text-align:center;"></div>
-    </div>
-  `;
+  // Profil "famille" : Score de risques + PDF remontés juste sous les résultats, avant le rapport technique.
+  const html = profil === 'famille'
+    ? blocRisques + blocPdf + blocRapportTechnique + blocCalendrier + blocsMax
+    : blocRapportTechnique + blocRisques + blocCalendrier + blocsMax + blocPdf;
 
   zone.innerHTML = html;
   document.getElementById('btn-generer-pdf').addEventListener('click', () => genererRapportPDF());
@@ -1132,7 +1391,7 @@ async function chargerCalendrierMeteo(lat, lon) {
       else if (pluie > 10) alerte = '🌧️ Fortes pluies prévues';
       else if (pluie > 1) alerte = '💧 Pluie prévue';
       const jourLabel = new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-      return `<div class="resultat-culture"><span class="nom">${jourLabel}</span><span style="font-size:12px;color:var(--texte-doux);">${tmin.toFixed(0)}°/${tmax.toFixed(0)}° — ${alerte}</span></div>`;
+      return `<div class="resultat-culture"><span class="nom">${jourLabel}</span><span style="font-size:12px;color:var(--gris-doux);">${tmin.toFixed(0)}°/${tmax.toFixed(0)}° — ${alerte}</span></div>`;
     }).join('');
     zone.innerHTML = jours;
   } catch (e) {
@@ -1358,17 +1617,29 @@ document.getElementById('btn-ajouter-terrain').addEventListener('click', () => {
     document.querySelector('[data-vue="vue-abonnement"]').click();
     return;
   }
+  const nouvelId = 't' + Date.now();
+  // Dette technique résolue : on conserve la valeur choisie (bio/hve/usda), pas seulement son libellé en texte libre,
+  // pour pouvoir pré-sélectionner le bon onglet dans cert-section.
+  const certifSouhaitee = document.getElementById('certif-souhaitee').value || '';
   terrains.push({
-    id: 't' + Date.now(),
+    id: nouvelId,
     nom,
     type: document.getElementById('nt-type').value,
     numero: document.getElementById('nt-numero').value.trim(),
     superficie: document.getElementById('nt-superficie').value.trim(),
-    notes: document.getElementById('nt-notes').value.trim()
+    notes: document.getElementById('nt-notes').value.trim(),
+    certifSouhaitee
   });
   sauvegarderTerrains(terrains);
   ['nt-nom', 'nt-numero', 'nt-superficie', 'nt-notes'].forEach(id => document.getElementById(id).value = '');
   afficherTerrains();
+
+  if (profilActif() === 'qualite' && certifSouhaitee) {
+    setTimeout(() => {
+      const carteTerrain = document.getElementById(`cert-${nouvelId}`);
+      if (carteTerrain) carteTerrain.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  }
 });
 
 function afficherTerrains() {
@@ -1376,6 +1647,7 @@ function afficherTerrains() {
   const zone = document.getElementById('liste-terrains');
   if (terrains.length === 0) {
     zone.innerHTML = '<div class="vide">Aucun terrain enregistré pour l\'instant.</div>';
+    appliquerHabillageTerrains(profilActif());
     return;
   }
   zone.innerHTML = '';
@@ -1394,8 +1666,14 @@ function afficherTerrains() {
           <button class="cert-tab" data-label="hve">HVE (France)</button>
           <button class="cert-tab" data-label="usda">USDA Organic (USA)</button>
         </div>
-        <div class="cert-progress-wrap"><div class="cert-progress-bar" style="width:0%"></div></div>
-        <div class="cert-progress-label"></div>
+        <div class="cert-anneau-ligne" style="text-align:center;">
+          <div class="anneau-progression anneau-cert" id="anneau-cert-${t.id}" style="margin: 0 auto 4px;">
+            <div class="anneau-contenu">
+              <span class="compteur-anneau" id="compteur-cert-${t.id}">0/0</span>
+              <span class="anneau-unite">critères</span>
+            </div>
+          </div>
+        </div>
         <ul class="cert-checklist"></ul>
         <div class="cert-organisme"></div>
       </div>
@@ -1406,8 +1684,10 @@ function afficherTerrains() {
       afficherTerrains();
     });
     zone.appendChild(div);
-    initSectionCertification(t.id, div.querySelector(`#cert-${t.id}`));
+    initSectionCertification(t.id, div.querySelector(`#cert-${t.id}`), t.certifSouhaitee);
   });
+
+  appliquerHabillageTerrains(profilActif());
 }
 
 /* ============================================================
@@ -1456,15 +1736,17 @@ function sauvegarderCertifications(data) {
   localStorage.setItem('agriia_certifications', JSON.stringify(data));
 }
 
-function initSectionCertification(terrainId, container) {
+function initSectionCertification(terrainId, container, labelPreselectionne) {
   let certifs = chargerCertifications();
   if (!certifs[terrainId]) certifs[terrainId] = {};
-  let labelActif = 'bio';
+  let labelActif = (labelPreselectionne && LABELS_CERTIFICATION[labelPreselectionne]) ? labelPreselectionne : 'bio';
+  const dernierPctParLabel = {};
 
   const tabs = container.querySelectorAll('.cert-tab');
+  tabs.forEach(t => t.classList.toggle('actif', t.dataset.label === labelActif));
   const checklist = container.querySelector('.cert-checklist');
-  const progressBar = container.querySelector('.cert-progress-bar');
-  const progressLabel = container.querySelector('.cert-progress-label');
+  const anneauCert = container.querySelector('.anneau-cert');
+  const compteurCert = container.querySelector('.anneau-cert .compteur-anneau');
   const organismeDiv = container.querySelector('.cert-organisme');
 
   function rendre() {
@@ -1488,9 +1770,19 @@ function initSectionCertification(terrainId, container) {
       });
       checklist.appendChild(li);
     });
-    const pct = Math.round((coches.length / label.criteres.length) * 100);
-    progressBar.style.width = pct + '%';
-    progressLabel.textContent = `${coches.length} / ${label.criteres.length} critères remplis`;
+
+    const pctCible = Math.round((coches.length / label.criteres.length) * 100);
+    compteurCert.textContent = `${coches.length}/${label.criteres.length}`;
+    const dernierPct = dernierPctParLabel[labelActif];
+    if (dernierPct === undefined) {
+      // Premier affichage de cet onglet pour ce terrain : révélation "time-lapse"
+      animerAnneau(anneauCert, null, 0, pctCible, 1200, easeCroissance);
+    } else if (dernierPct !== pctCible) {
+      // Coche/décoche un critère (ou nouvelle valeur en revisitant l'onglet) : ajustement discret
+      animerAnneau(anneauCert, null, dernierPct, pctCible, 450, easeMiseAJour);
+    }
+    dernierPctParLabel[labelActif] = pctCible;
+
     organismeDiv.innerHTML = label.organisme;
   }
 
@@ -1506,11 +1798,185 @@ function initSectionCertification(terrainId, container) {
 }
 
 /* ============================================================
+   PERSONNALISATION PAR PROFIL
+   ============================================================
+   Clé canonique désormais écrite par l'onboarding (écrans "état" + "objectif") :
+     - agriia_profil : 'neo' | 'structuration' | 'qualite' | 'multi-parcelles'
+   profilActuel() l'expose telle quelle (comme niveauActuel() pour l'abonnement).
+   profilActif() la traduit vers les codes internes utilisés par le dashboard
+   (neo/famille/qualite/gestionnaire), avec repli sur l'ancien schéma à deux clés
+   (agriia_persona / agriia_objectif) si jamais il était utilisé ailleurs. */
+
+const PROFIL_VERS_PERSONA_INTERNE = {
+  neo: 'neo',
+  structuration: 'famille',
+  qualite: 'qualite',
+  'multi-parcelles': 'gestionnaire'
+};
+
+const OBJECTIF_VERS_PERSONA = {
+  cultiver: 'neo',
+  financement: 'famille',
+  certification: 'qualite',
+  piloter: 'gestionnaire'
+};
+
+const TEXTES_BANDEAU = {
+  famille: { icone: '🏦', texte: "Ton objectif : Sécuriser mon terrain et préparer un financement" },
+  qualite: { icone: '📋', texte: "Ton objectif : Viser une certification" },
+  gestionnaire: { icone: '📈', texte: "Ton objectif : Piloter plusieurs exploitations" }
+};
+
+function profilActuel() {
+  return localStorage.getItem('agriia_profil') || 'neo';
+}
+
+function profilActif() {
+  const nouveauProfil = localStorage.getItem('agriia_profil');
+  if (nouveauProfil && PROFIL_VERS_PERSONA_INTERNE[nouveauProfil]) {
+    return PROFIL_VERS_PERSONA_INTERNE[nouveauProfil];
+  }
+  // Repli sur l'ancien schéma (non utilisé actuellement, gardé par sécurité)
+  const direct = localStorage.getItem('agriia_persona');
+  if (direct && ['neo', 'famille', 'qualite', 'gestionnaire'].includes(direct)) return direct;
+  const objectif = localStorage.getItem('agriia_objectif');
+  return OBJECTIF_VERS_PERSONA[objectif] || 'neo';
+}
+
+
+function appliquerBandeauIdentite(profil) {
+  const bandeau = document.getElementById('bandeau-identite');
+  if (!bandeau) return;
+  const config = TEXTES_BANDEAU[profil];
+  if (config) {
+    document.getElementById('bandeau-icone').textContent = config.icone;
+    document.getElementById('bandeau-texte').textContent = config.texte;
+  }
+  bandeau.classList.toggle('visible', Boolean(config));
+}
+
+function appliquerOngletParDefaut(profil) {
+  if (profil === 'gestionnaire') {
+    const btnCarte = document.querySelector('.bottom-nav [data-vue="vue-carte"]');
+    if (btnCarte) btnCarte.click();
+  }
+}
+
+function reordonnerEnfants(parent, ids) {
+  if (!parent) return;
+  const enfants = ids.map(id => document.getElementById(id)).filter(Boolean);
+  enfants.forEach(el => el.classList.add('reordre-sortie'));
+  setTimeout(() => {
+    enfants.forEach(el => parent.appendChild(el));
+    requestAnimationFrame(() => {
+      enfants.forEach(el => el.classList.remove('reordre-sortie'));
+    });
+  }, 160);
+}
+
+function crossfadeBadge(el, appliquerChangement) {
+  if (!el) return;
+  el.style.opacity = 0;
+  setTimeout(() => {
+    appliquerChangement();
+    el.style.opacity = 1;
+  }, 150);
+}
+
+function appliquerHabillageDiagnostic(profil) {
+  const resultats = document.getElementById('resultats-diagnostic');
+  const blocPremium = document.getElementById('bloc-premium-diagnostic');
+  const blocCertifQuestion = document.getElementById('bloc-certif-question');
+  if (!resultats || !blocPremium || !blocCertifQuestion) return;
+  const parent = resultats.parentNode;
+  // bloc-certif-question remonté juste après les résultats pour le profil "qualite",
+  // sinon ordre par défaut (bloc premium puis bloc-certif-question).
+  const ordre = profil === 'qualite'
+    ? ['bloc-certif-question', 'bloc-premium-diagnostic']
+    : ['bloc-premium-diagnostic', 'bloc-certif-question'];
+  reordonnerEnfants(parent, ordre);
+  // Le réordonnancement du profil "famille" (Score de risques + PDF remontés) est géré
+  // directement dans afficherBlocPremiumDiagnostic(), car ce bloc est régénéré à chaque
+  // diagnostic / changement d'abonnement.
+}
+
+function appliquerHabillageTerrains(profil) {
+  const conteneur = document.getElementById('liste-fonctions-verrouillees');
+  if (conteneur) {
+    const idsAttendus = ['fv-rapport-technique', 'fv-score-risques', 'fv-rapport-pdf', 'fv-ca-projete', 'fv-ia-ndvi'];
+    if (idsAttendus.every(id => document.getElementById(id))) {
+      // Famille : Score de risques + Rapport PDF détaillé remontent en position 1-2.
+      const ordre = profil === 'famille'
+        ? ['fv-score-risques', 'fv-rapport-pdf', 'fv-rapport-technique', 'fv-ca-projete', 'fv-ia-ndvi']
+        : idsAttendus;
+      reordonnerEnfants(conteneur, ordre);
+    }
+  }
+
+  const compteur = document.getElementById('compteur-terrains-gestionnaire');
+  if (compteur) {
+    if (profil === 'gestionnaire') {
+      const nb = chargerTerrains().length;
+      document.getElementById('ctg-valeur').textContent = estPremium() ? `${nb}` : `${nb}/${LIMITE_TERRAINS_GRATUIT}`;
+      compteur.style.display = 'flex';
+    } else {
+      compteur.style.display = 'none';
+    }
+  }
+}
+
+function appliquerHabillageCarte(profil) {
+  const teaser = document.getElementById('teaser-roi-carte');
+  if (teaser) teaser.style.display = (profil === 'gestionnaire' && !estMax()) ? 'block' : 'none';
+}
+
+function appliquerHabillageAbonnement(profil) {
+  const badgePremium = document.getElementById('badge-recommande-premium');
+  const badgeMax = document.getElementById('badge-etiquette-max');
+  if (!badgePremium || !badgeMax) return;
+  const cartePremium = document.querySelector('.plan-carte.premium');
+  const carteMax = document.querySelector('.plan-carte.max');
+  if (profil === 'gestionnaire') {
+    crossfadeBadge(badgePremium, () => { badgePremium.style.display = 'none'; });
+    crossfadeBadge(badgeMax, () => { badgeMax.textContent = 'Recommandé'; });
+    if (cartePremium) cartePremium.classList.remove('mise-en-avant');
+    if (carteMax) carteMax.classList.add('mise-en-avant');
+  } else {
+    crossfadeBadge(badgePremium, () => { badgePremium.style.display = 'block'; });
+    crossfadeBadge(badgeMax, () => { badgeMax.textContent = 'Expert'; });
+    if (carteMax) carteMax.classList.remove('mise-en-avant');
+    if (cartePremium) cartePremium.classList.add('mise-en-avant');
+  }
+}
+
+function appliquerProfil() {
+  const profil = profilActif();
+  appliquerBandeauIdentite(profil);
+  appliquerOngletParDefaut(profil);
+  appliquerHabillageDiagnostic(profil);
+  appliquerHabillageTerrains(profil);
+  appliquerHabillageCarte(profil);
+  appliquerHabillageAbonnement(profil);
+}
+
+document.getElementById('btn-modifier-objectif').addEventListener('click', () => {
+  // Comportement partiel : le fichier actuel n'a pas d'écran de capture d'objectif ("Écran 2")
+  // ni de classe .selectionnee pour marquer le choix précédent (cf. blocage remonté au Chef de
+  // Projet). En attendant cette brique, on rouvre l'overlay d'onboarding existant depuis le début.
+  const overlay = document.getElementById('onboarding-overlay');
+  const track = document.getElementById('onboarding-track');
+  overlay.classList.remove('hidden');
+  track.scrollLeft = 0;
+  track.dispatchEvent(new Event('scroll'));
+});
+
+/* ============================================================
    INITIALISATION
    ============================================================ */
 initCarte();
 afficherTerrains();
 majAffichageAbonnement();
+appliquerProfil();
 
 /* ============================================================
    PWA
